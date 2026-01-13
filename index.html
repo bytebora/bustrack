@@ -560,6 +560,33 @@
             z-index: 10000;
             display: none;
         }
+        
+        /* Driver Button States */
+        .btn-driving {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .btn-not-driving {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+        }
+        
+        /* Driver Status Indicator */
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        
+        .status-active {
+            background-color: #10B981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        
+        .status-inactive {
+            background-color: #9CA3AF;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -614,12 +641,12 @@
             
             <!-- Role Selection -->
             <div class="flex gap-3 mb-6">
-                <div class="role-option" onclick="selectRole('driver')">
+                <div class="role-option" onclick="selectRole('driver')" id="driver-role-option">
                     <i class="fas fa-tachometer-alt role-icon"></i>
                     <div class="font-semibold text-gray-800" id="role-driver">Driver</div>
                     <div class="text-xs text-gray-500 mt-1" id="role-driver-desc">Manage routes</div>
                 </div>
-                <div class="role-option" onclick="selectRole('parent')">
+                <div class="role-option" onclick="selectRole('parent')" id="parent-role-option">
                     <i class="fas fa-user-friends role-icon"></i>
                     <div class="font-semibold text-gray-800" id="role-parent">Parent</div>
                     <div class="text-xs text-gray-500 mt-1" id="role-parent-desc">Track children</div>
@@ -796,11 +823,29 @@
                     </div>
                 </div>
                 
-                <!-- Action Button -->
-                <button id="toggle-trip" onclick="toggleTrip()" class="btn-primary hover:scale-[1.02] transition-transform">
-                    <i class="fas fa-play mr-2"></i>
-                    <span id="start-trip-button">Start Trip</span>
-                </button>
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button id="toggle-trip" onclick="toggleTrip()" class="btn-primary hover:scale-[1.02] transition-transform">
+                        <i class="fas fa-play mr-2"></i>
+                        <span id="start-trip-button">Start Trip</span>
+                    </button>
+                    <button onclick="showRouteEditor()" class="btn-secondary hover:scale-[1.02] transition-transform">
+                        <i class="fas fa-edit mr-2"></i>
+                        <span id="edit-route-button">Edit Route</span>
+                    </button>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="showAllStops()" class="stat-card text-center hover:scale-105 transition-transform">
+                        <i class="fas fa-map-marker text-blue-600 text-lg mb-2"></i>
+                        <p class="text-xs font-semibold text-gray-900" id="all-stops-button">All Stops</p>
+                    </button>
+                    <button onclick="showBusDetails()" class="stat-card text-center hover:scale-105 transition-transform">
+                        <i class="fas fa-bus text-green-600 text-lg mb-2"></i>
+                        <p class="text-xs font-semibold text-gray-900" id="bus-details-button">Bus Details</p>
+                    </button>
+                </div>
             </div>
             
             <!-- Parent UI -->
@@ -1104,6 +1149,54 @@
         </div>
     </div>
 
+    <!-- Route Editor Modal -->
+    <div id="route-editor-modal" class="modal">
+        <div class="modal-content animate__animated animate__fadeInUp">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-900">Edit Route</h3>
+                <button onclick="hideRouteEditor()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="form-group">
+                    <label class="form-label">Route Name</label>
+                    <input type="text" id="route-name-input" class="form-input" placeholder="Enter route name" value="School Route">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Bus Number</label>
+                    <input type="text" id="bus-number-input" class="form-input" placeholder="Enter bus number" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Total Seats</label>
+                    <input type="number" id="total-seats-input" class="form-input" placeholder="Enter total seats" value="30" min="1" max="100">
+                </div>
+                
+                <div class="border-t border-gray-200 pt-4">
+                    <h4 class="font-semibold text-gray-800 mb-3">Route Stops</h4>
+                    <div id="route-stops-list" class="space-y-2 max-h-60 overflow-y-auto">
+                        <!-- Stops will be populated here -->
+                    </div>
+                    <button onclick="addNewStop()" class="btn-secondary mt-3 w-full">
+                        <i class="fas fa-plus mr-2"></i> Add Stop
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mt-6 flex gap-3">
+                <button onclick="saveRoute()" class="btn-primary flex-1 hover:scale-[1.02] transition-transform">
+                    Save Route
+                </button>
+                <button onclick="hideRouteEditor()" class="btn-secondary flex-1 hover:scale-[1.02] transition-transform">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Floating Action Buttons -->
     <div id="fab-container" class="hidden absolute bottom-24 right-4 z-40 space-y-3">
         <button onclick="locateBus()" class="w-14 h-14 glass-nav rounded-2xl shadow-xl border border-white/30 flex items-center justify-center hover:scale-110 transition-transform">
@@ -1165,6 +1258,9 @@
                 'present-count': '0/0 present',
                 'start-trip-button': 'Start Trip',
                 'stop-trip-button': 'Stop Trip',
+                'edit-route-button': 'Edit Route',
+                'all-stops-button': 'All Stops',
+                'bus-details-button': 'Bus Details',
                 'child-name': 'Child\'s Journey',
                 'bus-info': 'Bus -- • Driver: --',
                 'picked-button': 'Picked Up',
@@ -1250,6 +1346,9 @@
                 'present-count': '0/0 wapo',
                 'start-trip-button': 'Anza Safari',
                 'stop-trip-button': 'Acha Safari',
+                'edit-route-button': 'Hariri Njia',
+                'all-stops-button': 'Vituo Vyote',
+                'bus-details-button': 'Maelezo ya Basi',
                 'child-name': 'Safari ya Mtoto',
                 'bus-info': 'Basi -- • Dereva: --',
                 'picked-button': 'Amepokewa',
@@ -1437,7 +1536,8 @@
             document.querySelectorAll('.role-option').forEach(option => {
                 option.classList.remove('selected');
             });
-            event.target.closest('.role-option').classList.add('selected');
+            const targetOption = role === 'driver' ? document.getElementById('driver-role-option') : document.getElementById('parent-role-option');
+            targetOption.classList.add('selected');
         }
 
         function selectSignupRole(role) {
@@ -1507,11 +1607,91 @@
                     }
                 }
                 
+                // If no user found, create a demo driver account for testing
+                if (email.includes('driver') && selectedRole === 'driver') {
+                    createDemoDriverAccount(email, password, rememberMe);
+                    return;
+                }
+                
                 throw new Error('Invalid credentials');
             } catch (error) {
                 hideLoading();
                 showToast('Login Failed', 'Invalid email or password', 'error');
             }
+        }
+
+        function createDemoDriverAccount(email, password, rememberMe) {
+            const newUser = {
+                id: `driver_${Date.now()}`,
+                email: email,
+                password: password,
+                name: 'Demo Driver',
+                role: 'driver',
+                phone: '+255 700 000 000',
+                busNumber: 'BUS-101',
+                licenseNumber: 'DL-123456',
+                avatarSeed: 'DemoDriver',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            const userKey = `busTrack_user_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            localStorage.setItem(userKey, JSON.stringify(newUser));
+            
+            // Create default route
+            const defaultRoute = {
+                id: `route_${Date.now()}`,
+                busNumber: 'BUS-101',
+                name: 'School Route 101',
+                stops: [
+                    { id: 1, name: "Main School", lat: -6.8100, lng: 39.2250, order: 1, students: 0 },
+                    { id: 2, name: "Stop 1", lat: -6.8000, lng: 39.2200, order: 2, students: 3 },
+                    { id: 3, name: "Stop 2", lat: -6.7924, lng: 39.2083, order: 3, students: 6 },
+                    { id: 4, name: "Stop 3", lat: -6.7850, lng: 39.2110, order: 4, students: 5 },
+                    { id: 5, name: "Stop 4", lat: -6.7780, lng: 39.2150, order: 5, students: 7 }
+                ],
+                schedule: {
+                    morningStart: "07:00",
+                    morningEnd: "08:30",
+                    afternoonStart: "15:00",
+                    afternoonEnd: "16:30"
+                },
+                totalSeats: 30,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            localStorage.setItem(`busTrack_route_BUS-101`, JSON.stringify(defaultRoute));
+            
+            // Create demo students
+            const demoStudents = [
+                { id: 'stu_1', name: 'John Mwita', grade: '3', school: 'Downtown School', present: false, status: 'waiting' },
+                { id: 'stu_2', name: 'Sarah Juma', grade: '4', school: 'Downtown School', present: false, status: 'waiting' },
+                { id: 'stu_3', name: 'David Hassan', grade: '5', school: 'Downtown School', present: false, status: 'waiting' },
+                { id: 'stu_4', name: 'Amina Charles', grade: '3', school: 'Downtown School', present: false, status: 'waiting' },
+                { id: 'stu_5', name: 'Michael Kim', grade: '6', school: 'Downtown School', present: false, status: 'waiting' }
+            ];
+            
+            localStorage.setItem(`busTrack_roster_BUS-101`, JSON.stringify(demoStudents));
+            
+            currentUser = newUser;
+            currentRole = 'driver';
+            
+            const sessionData = {
+                userId: newUser.id,
+                email: newUser.email,
+                role: newUser.role,
+                loginTime: Date.now(),
+                expires: Date.now() + (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000)
+            };
+            
+            localStorage.setItem('busTrack_session', JSON.stringify(sessionData));
+            
+            hideLoading();
+            document.getElementById('login-screen').classList.add('hidden');
+            initApp();
+            
+            showToast('Welcome', `Hello, Demo Driver!`, 'success');
         }
 
         async function createAccount() {
@@ -1566,8 +1746,32 @@
                 
                 if (signupRole === 'driver') {
                     newUser.busNumber = 'BUS-' + (Math.floor(Math.random() * 900) + 100);
-                    newUser.route = 'New Route';
                     newUser.licenseNumber = `DL-${Date.now().toString().substr(-6)}`;
+                    
+                    // Create default route for new driver
+                    const defaultRoute = {
+                        id: `route_${Date.now()}`,
+                        busNumber: newUser.busNumber,
+                        name: 'New Route',
+                        stops: [
+                            { id: 1, name: "School", lat: -6.8100, lng: 39.2250, order: 1, students: 0 },
+                            { id: 2, name: "Stop 1", lat: -6.8000, lng: 39.2200, order: 2, students: 0 },
+                            { id: 3, name: "Stop 2", lat: -6.7924, lng: 39.2083, order: 3, students: 0 },
+                            { id: 4, name: "Stop 3", lat: -6.7850, lng: 39.2110, order: 4, students: 0 },
+                            { id: 5, name: "Stop 4", lat: -6.7780, lng: 39.2150, order: 5, students: 0 }
+                        ],
+                        schedule: {
+                            morningStart: "07:00",
+                            morningEnd: "08:30",
+                            afternoonStart: "15:00",
+                            afternoonEnd: "16:30"
+                        },
+                        totalSeats: 30,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    };
+                    
+                    localStorage.setItem(`busTrack_route_${newUser.busNumber}`, JSON.stringify(defaultRoute));
                 } else {
                     const childName = document.getElementById('child-name-input').value.trim();
                     const childGrade = document.getElementById('child-grade').value;
@@ -1795,6 +1999,7 @@
                     afternoonStart: "15:00",
                     afternoonEnd: "16:30"
                 },
+                totalSeats: 30,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
@@ -1848,6 +2053,7 @@
                 document.getElementById('driver-destination').textContent = routeData.name;
                 document.getElementById('route-number-label').textContent = routeData.name;
                 document.getElementById('route-name').textContent = routeData.name;
+                document.getElementById('schedule-status').textContent = "On Time";
             }
             
             // Fit bounds
@@ -1857,7 +2063,72 @@
             }
         }
 
-        // ==================== LOCATION TRACKING ====================
+        // ==================== DRIVER UI FUNCTIONS ====================
+        function showDriverUI() {
+            document.getElementById('driver-status').classList.remove('hidden');
+            document.getElementById('driver-ui').classList.remove('hidden');
+            document.getElementById('parent-ui').classList.add('hidden');
+            document.getElementById('parent-status').classList.add('hidden');
+            
+            // Load driver data
+            loadDriverData();
+            
+            // Show share location button
+            document.getElementById('share-location-btn').classList.remove('hidden');
+            
+            // Update button text based on driving status
+            updateTripButton();
+        }
+
+        function loadDriverData() {
+            // Load students
+            if (currentUser.busNumber) {
+                const rosterKey = `busTrack_roster_${currentUser.busNumber}`;
+                students = JSON.parse(localStorage.getItem(rosterKey) || '[]');
+                
+                const presentCount = students.filter(s => s.present).length;
+                document.getElementById('student-count').textContent = presentCount;
+                document.getElementById('present-count').textContent = `${presentCount}/${students.length} present`;
+                
+                updateStudentAttendanceList();
+            }
+            
+            // Load route info
+            const routeKey = `busTrack_route_${currentUser.busNumber}`;
+            const routeData = JSON.parse(localStorage.getItem(routeKey));
+            if (routeData) {
+                document.getElementById('driver-route-name').textContent = routeData.name;
+                document.getElementById('driver-destination').textContent = routeData.name;
+                document.getElementById('driver-next-stop').textContent = routeData.stops[0]?.name || '--';
+                document.getElementById('next-stop-eta').textContent = '--';
+            }
+        }
+
+        function updateTripButton() {
+            const button = document.getElementById('toggle-trip');
+            const icon = button.querySelector('i');
+            const span = button.querySelector('span');
+            
+            if (isDriving) {
+                button.className = 'btn-primary btn-driving hover:scale-[1.02] transition-transform';
+                icon.className = 'fas fa-stop mr-2';
+                span.textContent = translations[currentLanguage]['stop-trip-button'];
+            } else {
+                button.className = 'btn-primary btn-not-driving hover:scale-[1.02] transition-transform';
+                icon.className = 'fas fa-play mr-2';
+                span.textContent = translations[currentLanguage]['start-trip-button'];
+            }
+        }
+
+        function toggleTrip() {
+            if (isDriving) {
+                stopLocationTracking();
+            } else {
+                startLocationTracking();
+            }
+            updateTripButton();
+        }
+
         function startLocationTracking() {
             if (!navigator.geolocation) {
                 showToast('Error', 'Geolocation is not supported by your browser', 'error');
@@ -1893,6 +2164,10 @@
             
             saveTrip(currentTrip);
             showToast('Trip Started', 'Location tracking activated', 'success');
+            
+            // Update UI
+            document.getElementById('driver-status-badge').innerHTML = '<i class="fas fa-circle text-xs mr-1 text-green-500"></i>' + translations[currentLanguage]['status-online'];
+            document.getElementById('driver-status-badge').className = 'bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold uppercase';
         }
 
         function stopLocationTracking() {
@@ -1913,6 +2188,10 @@
             }
             
             showToast('Trip Stopped', 'Location tracking deactivated', 'info');
+            
+            // Update UI
+            document.getElementById('driver-status-badge').innerHTML = '<i class="fas fa-circle text-xs mr-1"></i>' + translations[currentLanguage]['status-offline'];
+            document.getElementById('driver-status-badge').className = 'bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold uppercase';
         }
 
         function handleLocationUpdate(position) {
@@ -1964,7 +2243,7 @@
             let message = 'Unable to get your location';
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    message = 'Location permission denied';
+                    message = 'Location permission denied. Please enable location services.';
                     break;
                 case error.POSITION_UNAVAILABLE:
                     message = 'Location information unavailable';
@@ -1974,6 +2253,7 @@
                     break;
             }
             showToast('Location Error', message, 'error');
+            stopLocationTracking();
         }
 
         function updateBusMarker() {
@@ -2019,7 +2299,7 @@
         }
 
         function updateETA() {
-            if (routeStops.length === 0) return;
+            if (routeStops.length === 0 || !isDriving) return;
             
             // Find nearest stop
             let nearestStop = null;
@@ -2043,7 +2323,6 @@
                 const etaMinutes = Math.round((nearestStop.distance / speed) * 60);
                 
                 document.getElementById('eta-time').textContent = Math.max(1, etaMinutes);
-                document.getElementById('parent-eta').textContent = Math.max(1, etaMinutes);
                 document.getElementById('next-stop-name').textContent = nearestStop.name;
                 document.getElementById('driver-next-stop').textContent = nearestStop.name;
                 document.getElementById('next-stop-eta').textContent = `${Math.max(1, etaMinutes)} min`;
@@ -2055,7 +2334,7 @@
         }
 
         function checkApproachingStops() {
-            if (routeStops.length === 0) return;
+            if (routeStops.length === 0 || !isDriving) return;
             
             routeStops.forEach((stop, index) => {
                 const distance = calculateDistance(
@@ -2124,59 +2403,225 @@
             return R * c;
         }
 
-        // ==================== DRIVER UI FUNCTIONS ====================
-        function showDriverUI() {
-            document.getElementById('driver-status').classList.remove('hidden');
-            document.getElementById('driver-ui').classList.remove('hidden');
-            document.getElementById('parent-ui').classList.add('hidden');
-            document.getElementById('parent-status').classList.add('hidden');
-            
-            // Load driver data
-            loadDriverData();
-            
-            // Show share location button
-            document.getElementById('share-location-btn').classList.remove('hidden');
-        }
-
-        function loadDriverData() {
-            // Load students
-            if (currentUser.busNumber) {
-                const rosterKey = `busTrack_roster_${currentUser.busNumber}`;
-                students = JSON.parse(localStorage.getItem(rosterKey) || '[]');
-                
-                document.getElementById('student-count').textContent = students.filter(s => s.present).length;
-                document.getElementById('present-count').textContent = `${students.filter(s => s.present).length}/${students.length} present`;
-                
-                updateStudentAttendanceList();
-            }
-            
-            // Update status
-            updateDriverStatus(isDriving);
-        }
-
         function updateDriverStatus(active) {
-            const statusBadge = document.getElementById('driver-status-badge');
-            const toggleButton = document.getElementById('toggle-trip');
+            // This function updates driver status badge
+            // Already handled in start/stop location tracking functions
+        }
+
+        // ==================== DRIVER BUTTON FUNCTIONS ====================
+        function showRouteEditor() {
+            document.getElementById('route-editor-modal').style.display = 'flex';
             
-            if (active) {
-                statusBadge.innerHTML = '<i class="fas fa-circle text-xs mr-1 text-green-500"></i>' + translations[currentLanguage]['status-online'];
-                statusBadge.className = 'bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold uppercase';
-                toggleButton.innerHTML = '<i class="fas fa-stop mr-2"></i><span>' + translations[currentLanguage]['stop-trip-button'] + '</span>';
-            } else {
-                statusBadge.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i>' + translations[currentLanguage]['status-offline'];
-                statusBadge.className = 'bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold uppercase';
-                toggleButton.innerHTML = '<i class="fas fa-play mr-2"></i><span>' + translations[currentLanguage]['start-trip-button'] + '</span>';
+            // Load current route data
+            const routeKey = `busTrack_route_${currentUser.busNumber}`;
+            const routeData = JSON.parse(localStorage.getItem(routeKey));
+            
+            if (routeData) {
+                document.getElementById('route-name-input').value = routeData.name;
+                document.getElementById('bus-number-input').value = currentUser.busNumber;
+                document.getElementById('total-seats-input').value = routeData.totalSeats || 30;
+                
+                // Load stops
+                const stopsList = document.getElementById('route-stops-list');
+                stopsList.innerHTML = '';
+                
+                routeData.stops.forEach((stop, index) => {
+                    const stopEl = document.createElement('div');
+                    stopEl.className = 'flex items-center gap-2 p-3 bg-gray-50 rounded-lg';
+                    stopEl.innerHTML = `
+                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span class="text-sm font-bold text-blue-600">${index + 1}</span>
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" value="${stop.name}" class="form-input py-2 text-sm" placeholder="Stop name" onchange="updateStopName(${index}, this.value)">
+                            <div class="text-xs text-gray-500 mt-1">
+                                ${stop.lat.toFixed(6)}, ${stop.lng.toFixed(6)}
+                            </div>
+                        </div>
+                        <button onclick="removeStop(${index})" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                    stopsList.appendChild(stopEl);
+                });
             }
         }
 
-        function toggleTrip() {
-            if (isDriving) {
-                stopLocationTracking();
-            } else {
-                startLocationTracking();
+        function hideRouteEditor() {
+            document.getElementById('route-editor-modal').style.display = 'none';
+        }
+
+        function updateStopName(index, newName) {
+            const routeKey = `busTrack_route_${currentUser.busNumber}`;
+            const routeData = JSON.parse(localStorage.getItem(routeKey));
+            
+            if (routeData && routeData.stops[index]) {
+                routeData.stops[index].name = newName;
+                routeData.updatedAt = new Date().toISOString();
+                localStorage.setItem(routeKey, JSON.stringify(routeData));
+                
+                // Update map marker
+                if (stopMarkers[index]) {
+                    stopMarkers[index].setPopupContent(`
+                        <div class="p-2">
+                            <strong class="text-sm">${newName}</strong><br>
+                            <span class="text-xs text-gray-600">Stop ${index + 1}</span><br>
+                            <span class="text-xs text-gray-600">${routeData.stops[index].students || 0} students</span>
+                        </div>
+                    `);
+                }
             }
         }
 
+        function removeStop(index) {
+            const routeKey = `busTrack_route_${currentUser.busNumber}`;
+            const routeData = JSON.parse(localStorage.getItem(routeKey));
+            
+            if (routeData && routeData.stops[index]) {
+                routeData.stops.splice(index, 1);
+                
+                // Update order numbers
+                routeData.stops.forEach((stop, i) => {
+                    stop.order = i + 1;
+                });
+                
+                routeData.updatedAt = new Date().toISOString();
+                localStorage.setItem(routeKey, JSON.stringify(routeData));
+                
+                // Refresh route display
+                displayRoute(routeData);
+                showRouteEditor(); // Reload editor
+            }
+        }
+
+        function addNewStop() {
+            const routeKey = `busTrack_route_${currentUser.busNumber}`;
+            const routeData = JSON.parse(localStorage.getItem(routeKey));
+            
+            if (routeData) {
+                const newStop = {
+                    id: `stop_${Date.now()}`,
+                    name: `Stop ${routeData.stops.length + 1}`,
+                    lat: -6.7924,
+                    lng: 39.2083,
+                    order: routeData.stops.length + 1,
+                    students: 0
+                };
+                
+                routeData.stops.push(newStop);
+                routeData.updatedAt = new Date().toISOString();
+                localStorage.setItem(routeKey, JSON.stringify(routeData));
+                
+                // Refresh route display
+                displayRoute(routeData);
+                showRouteEditor(); // Reload editor
+            }
+        }
+
+        function saveRoute() {
+            const routeKey = `busTrack_route_${currentUser.busNumber}`;
+            const routeData = JSON.parse(localStorage.getItem(routeKey));
+            
+            if (routeData) {
+                routeData.name = document.getElementById('route-name-input').value;
+                routeData.totalSeats = parseInt(document.getElementById('total-seats-input').value) || 30;
+                routeData.updatedAt = new Date().toISOString();
+                
+                localStorage.setItem(routeKey, JSON.stringify(routeData));
+                
+                // Update UI
+                document.getElementById('driver-route-name').textContent = routeData.name;
+                document.getElementById('driver-destination').textContent = routeData.name;
+                document.getElementById('route-number-label').textContent = routeData.name;
+                document.getElementById('route-name').textContent = routeData.name;
+                
+                hideRouteEditor();
+                showToast('Route Saved', 'Route updated successfully', 'success');
+            }
+        }
+
+        function showAllStops() {
+            if (routeStops.length === 0) {
+                showToast('No Stops', 'No stops configured for this route', 'info');
+                return;
+            }
+            
+            let stopList = 'Route Stops:\n\n';
+            routeStops.forEach((stop, index) => {
+                stopList += `${index + 1}. ${stop.name}\n`;
+                if (stop.students > 0) {
+                    stopList += `   Students: ${stop.students}\n`;
+                }
+                stopList += '\n';
+            });
+            
+            alert(stopList);
+        }
+
+        function showBusDetails() {
+            const routeKey = `busTrack_route_${currentUser.busNumber}`;
+            const routeData = JSON.parse(localStorage.getItem(routeKey));
+            
+            if (routeData) {
+                const details = `
+Bus Details:
+-----------------
+Bus Number: ${currentUser.busNumber}
+Route: ${routeData.name}
+Total Seats: ${routeData.totalSeats || 30}
+Stops: ${routeData.stops.length}
+Morning Schedule: ${routeData.schedule?.morningStart || '07:00'} - ${routeData.schedule?.morningEnd || '08:30'}
+Afternoon Schedule: ${routeData.schedule?.afternoonStart || '15:00'} - ${routeData.schedule?.afternoonEnd || '16:30'}
+                `;
+                alert(details);
+            } else {
+                showToast('No Details', 'Bus details not available', 'info');
+            }
+        }
+
+        function showNextStopDetails() {
+            if (routeStops.length === 0) {
+                showToast('No Stops', 'No stops configured', 'info');
+                return;
+            }
+            
+            if (currentStopIndex >= routeStops.length - 1) {
+                showToast('Route Complete', 'All stops have been visited', 'info');
+                return;
+            }
+            
+            const nextStop = routeStops[currentStopIndex + 1];
+            const details = `
+Next Stop Details:
+-----------------
+Name: ${nextStop.name}
+Stop Number: ${currentStopIndex + 2}
+Students: ${nextStop.students || 0}
+Coordinates: ${nextStop.lat.toFixed(6)}, ${nextStop.lng.toFixed(6)}
+            `;
+            alert(details);
+        }
+
+        function showSchedule() {
+            const routeKey = `busTrack_route_${currentUser.busNumber}`;
+            const routeData = JSON.parse(localStorage.getItem(routeKey));
+            
+            if (routeData && routeData.schedule) {
+                const schedule = `
+Route Schedule:
+-----------------
+Morning Pickup: ${routeData.schedule.morningStart} - ${routeData.schedule.morningEnd}
+Afternoon Dropoff: ${routeData.schedule.afternoonStart} - ${routeData.schedule.afternoonEnd}
+Total Stops: ${routeData.stops.length}
+Total Students: ${routeData.stops.reduce((sum, stop) => sum + (stop.students || 0), 0)}
+                `;
+                alert(schedule);
+            } else {
+                showToast('No Schedule', 'Schedule not available', 'info');
+            }
+        }
+
+        // ==================== STUDENT MANAGEMENT ====================
         function updateStudentAttendanceList() {
             const container = document.getElementById('student-attendance-list');
             container.innerHTML = '';
@@ -2230,6 +2675,9 @@
                 localStorage.setItem(rosterKey, JSON.stringify(students));
                 
                 // Update UI
+                const presentCount = students.filter(s => s.present).length;
+                document.getElementById('student-count').textContent = presentCount;
+                document.getElementById('present-count').textContent = `${presentCount}/${students.length} present`;
                 updateStudentAttendanceList();
                 
                 // Show notification
@@ -2244,6 +2692,11 @@
         }
 
         function markAllPresent() {
+            if (students.length === 0) {
+                showToast('No Students', 'No students to mark', 'info');
+                return;
+            }
+            
             students.forEach(student => {
                 student.present = true;
                 student.status = 'picked';
@@ -2253,6 +2706,8 @@
             const rosterKey = `busTrack_roster_${currentUser.busNumber}`;
             localStorage.setItem(rosterKey, JSON.stringify(students));
             
+            document.getElementById('student-count').textContent = students.length;
+            document.getElementById('present-count').textContent = `${students.length}/${students.length} present`;
             updateStudentAttendanceList();
             showToast('All Marked Present', 'All students marked as present', 'success');
             
@@ -2260,6 +2715,68 @@
             students.forEach(student => {
                 notifyParent(student.id, 'present');
             });
+            
+            hideStudentList();
+        }
+
+        function showStudentList() {
+            document.getElementById('student-list-modal').style.display = 'flex';
+            populateStudentList();
+        }
+
+        function hideStudentList() {
+            document.getElementById('student-list-modal').style.display = 'none';
+        }
+
+        function populateStudentList() {
+            const container = document.getElementById('student-list');
+            container.innerHTML = '';
+            
+            if (students.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-user-graduate text-2xl mb-2"></i>
+                        <p>No students available</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            students.forEach(student => {
+                const statusClass = student.present ? 'status-present' : 'status-absent';
+                const statusText = student.present ? 'Present' : 'Absent';
+                const statusIcon = student.present ? 'fa-check-circle' : 'fa-times-circle';
+                
+                const studentEl = document.createElement('div');
+                studentEl.className = 'child-item';
+                studentEl.onclick = () => toggleStudentPresence(student.id);
+                studentEl.innerHTML = `
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">${student.name}</span>
+                            <span class="status-badge ${statusClass}">
+                                <i class="fas ${statusIcon} text-xs"></i>
+                                ${statusText}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500">${student.grade} • ${student.school}</div>
+                        <div class="text-xs text-gray-500 mt-1">Status: ${getStatusText(student.status)}</div>
+                    </div>
+                `;
+                container.appendChild(studentEl);
+            });
+        }
+
+        function getStatusText(status) {
+            return translations[currentLanguage][`status-${status}`] || status;
+        }
+
+        function notifyParent(childId, action) {
+            // In a real app, this would send a push notification
+            console.log(`Parent notified: Child ${childId} ${action}`);
         }
 
         // ==================== PARENT UI FUNCTIONS ====================
@@ -2274,9 +2791,6 @@
             
             // Load parent data
             loadParentData();
-            
-            // Start location updates
-            startParentLocationUpdates();
         }
 
         function loadParentData() {
@@ -2287,46 +2801,7 @@
                 document.getElementById('bus-info').textContent = `Bus ${child.busNumber} • Driver: --`;
                 document.getElementById('child-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${child.avatarSeed}`;
                 document.getElementById('child-status').textContent = getStatusText(child.status);
-                
-                // Load bus location
-                updateBusLocationForParent(child.busNumber);
-                
-                // Update timeline
-                updateTimeline();
             }
-        }
-
-        function updateBusLocationForParent(busNumber) {
-            const locationData = JSON.parse(localStorage.getItem(`busTrack_location_${busNumber}`));
-            
-            if (locationData) {
-                const age = Date.now() - locationData.timestamp;
-                
-                if (age < CONFIG.MAX_LOCATION_AGE) {
-                    // Update ETA
-                    updateETAForParent(locationData);
-                } else {
-                    document.getElementById('eta-time').textContent = '--';
-                    document.getElementById('parent-eta').textContent = '--';
-                }
-            }
-        }
-
-        function updateETAForParent(locationData) {
-            // This would calculate ETA based on distance to school
-            // For now, we'll use a simple calculation
-            const eta = Math.floor(Math.random() * 20) + 5; // 5-25 minutes
-            document.getElementById('eta-time').textContent = eta;
-            document.getElementById('parent-eta').textContent = eta;
-        }
-
-        function startParentLocationUpdates() {
-            // Check bus location every 10 seconds
-            setInterval(() => {
-                if (currentUser.children && currentUser.children[0]) {
-                    updateBusLocationForParent(currentUser.children[0].busNumber);
-                }
-            }, 10000);
         }
 
         function markChildPicked() {
@@ -2373,76 +2848,12 @@
             localStorage.setItem(userKey, JSON.stringify(currentUser));
         }
 
-        function updateTimeline() {
-            const container = document.getElementById('timeline-items');
-            container.innerHTML = '';
-            
-            const now = new Date();
-            const timelineData = [
-                { time: '07:00 AM', title: 'Bus Departure', desc: 'From school', icon: 'bus', color: 'blue', status: 'completed' },
-                { time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), title: 'Current Location', desc: 'En route', icon: 'location-arrow', color: 'yellow', status: 'current' },
-                { time: '08:00 AM', title: 'Estimated Arrival', desc: 'At your location', icon: 'map-marker-alt', color: 'green', status: 'upcoming' }
-            ];
-            
-            timelineData.forEach(item => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'flex items-center gap-4 relative';
-                itemEl.innerHTML = `
-                    <div class="w-12 h-12 bg-${item.color}-500 rounded-xl shadow-lg flex items-center justify-center z-10">
-                        <i class="fas fa-${item.icon} text-white"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-bold text-gray-900">${item.title}</p>
-                        <p class="text-sm text-gray-600">${item.desc}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="font-bold text-gray-900">${item.time.split(' ')[0]}</p>
-                        <p class="text-xs text-gray-500">${item.time.split(' ')[1] || ''}</p>
-                    </div>
-                `;
-                container.appendChild(itemEl);
-            });
-        }
-
-        // ==================== UTILITY FUNCTIONS ====================
-        function getStatusText(status) {
-            return translations[currentLanguage][`status-${status}`] || status;
-        }
-
-        function notifyParent(childId, action) {
-            // In a real app, this would send a push notification
-            // For now, we'll create a notification in storage
-            const notification = {
-                id: `notif_${Date.now()}`,
-                type: 'info',
-                title: action === 'present' ? 'Student Present' : 'Student Absent',
-                message: `Your child's attendance has been updated`,
-                timestamp: new Date().toISOString(),
-                read: false
-            };
-            
-            // Save notification
-            saveNotification(notification);
-        }
-
         function notifyDriver(childId, action) {
             // In a real app, this would send a notification to the driver
-            // For now, we'll just log it
             console.log(`Driver notified: Child ${childId} ${action}`);
         }
 
-        function saveNotification(notification) {
-            const notifications = JSON.parse(localStorage.getItem('busTrack_notifications') || '[]');
-            notifications.unshift(notification);
-            
-            // Keep only last 50 notifications
-            if (notifications.length > 50) {
-                notifications.pop();
-            }
-            
-            localStorage.setItem('busTrack_notifications', JSON.stringify(notifications));
-        }
-
+        // ==================== UTILITY FUNCTIONS ====================
         function saveTrip(trip) {
             const trips = JSON.parse(localStorage.getItem('busTrack_trips') || '[]');
             trips.unshift(trip);
@@ -2526,7 +2937,12 @@
         }
 
         function shareLocation() {
-            if (navigator.share && isDriving) {
+            if (!isDriving) {
+                showToast('Not Driving', 'Start a trip to share location', 'warning');
+                return;
+            }
+            
+            if (navigator.share) {
                 navigator.share({
                     title: 'Bus Location',
                     text: `Bus ${currentUser.busNumber} is currently at ${busLocation.lat.toFixed(6)}, ${busLocation.lng.toFixed(6)}`,
@@ -2574,68 +2990,12 @@
             document.getElementById('user-menu-modal').style.display = 'flex';
         }
 
-        function showStudentList() {
-            document.getElementById('student-list-modal').style.display = 'flex';
-            populateStudentList();
-        }
-
-        function hideStudentList() {
-            document.getElementById('student-list-modal').style.display = 'none';
-        }
-
-        function populateStudentList() {
-            const container = document.getElementById('student-list');
-            container.innerHTML = '';
-            
-            if (students.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8 text-gray-500">
-                        <i class="fas fa-user-graduate text-2xl mb-2"></i>
-                        <p>No students available</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            students.forEach(student => {
-                const statusClass = student.present ? 'status-present' : 'status-absent';
-                const statusText = student.present ? 'Present' : 'Absent';
-                const statusIcon = student.present ? 'fa-check-circle' : 'fa-times-circle';
-                
-                const studentEl = document.createElement('div');
-                studentEl.className = 'child-item';
-                studentEl.onclick = () => toggleStudentPresence(student.id);
-                studentEl.innerHTML = `
-                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                        <i class="fas fa-user text-gray-600"></i>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-center">
-                            <span class="font-medium">${student.name}</span>
-                            <span class="status-badge ${statusClass}">
-                                <i class="fas ${statusIcon} text-xs"></i>
-                                ${statusText}
-                            </span>
-                        </div>
-                        <div class="text-xs text-gray-500">${student.grade} • ${student.school}</div>
-                        <div class="text-xs text-gray-500 mt-1">Status: ${getStatusText(student.status)}</div>
-                    </div>
-                `;
-                container.appendChild(studentEl);
-            });
-        }
-
         // ==================== OTHER FUNCTIONS ====================
         function callDriver() {
-            if (currentUser.children && currentUser.children[0]) {
-                const busNumber = currentUser.children[0].busNumber;
-                showToast('Call Driver', `Calling driver of bus ${busNumber}...`, 'info');
-                
-                // In a real app, this would initiate a phone call
-                setTimeout(() => {
-                    showToast('Call Connected', 'You are now connected to the driver', 'success');
-                }, 2000);
-            }
+            showToast('Call Driver', 'Calling driver...', 'info');
+            setTimeout(() => {
+                showToast('Call Connected', 'You are now connected to the driver', 'success');
+            }, 2000);
         }
 
         function showNotifications() {
@@ -2674,12 +3034,8 @@
             showToast('Help', 'Help center coming soon', 'info');
         }
 
-        function showNextStopDetails() {
-            showToast('Stop Details', 'Showing stop information', 'info');
-        }
-
-        function showSchedule() {
-            showToast('Schedule', 'Showing route schedule', 'info');
+        function toggleChildStatus() {
+            showToast('Child Status', 'Tap Picked Up or Dropped Off buttons', 'info');
         }
 
         function logout() {
