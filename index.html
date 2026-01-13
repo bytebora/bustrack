@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BusTrack | Real-Time School Bus Tracking</title>
+    <title>BusTrack | Tanzania School Bus Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -20,11 +20,14 @@
     
     <style>
         :root {
-            --primary-blue: #2563eb;
+            --primary-blue: #1e3a8a;
             --secondary-blue: #1d4ed8;
             --accent-blue: #3b82f6;
-            --gradient-start: #2563eb;
+            --gradient-start: #1e3a8a;
             --gradient-end: #1e40af;
+            --success-green: #10b981;
+            --warning-yellow: #f59e0b;
+            --danger-red: #ef4444;
         }
         
         body, html { 
@@ -42,6 +45,80 @@
             bottom: 0; 
             width: 100%; 
             z-index: 0;
+        }
+        
+        /* Language Dropdown */
+        .language-dropdown {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+        }
+        
+        .language-btn {
+            background: white;
+            border: 2px solid var(--primary-blue);
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-weight: 600;
+            color: var(--primary-blue);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .language-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .language-btn.active {
+            background: var(--primary-blue);
+            color: white;
+        }
+        
+        .language-dropdown-content {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            min-width: 150px;
+            margin-top: 8px;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(-10px);
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1002;
+        }
+        
+        .language-dropdown-content.show {
+            opacity: 1;
+            transform: translateY(0);
+            visibility: visible;
+        }
+        
+        .language-option {
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .language-option:last-child {
+            border-bottom: none;
+        }
+        
+        .language-option:hover {
+            background: #f3f4f6;
         }
         
         /* Login Screen */
@@ -74,7 +151,7 @@
         
         /* Form Styles */
         .form-group {
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
         
         .form-label {
@@ -87,7 +164,7 @@
         
         .form-input {
             width: 100%;
-            padding: 16px;
+            padding: 14px;
             border: 2px solid #e5e7eb;
             border-radius: 12px;
             font-size: 16px;
@@ -113,22 +190,11 @@
             cursor: pointer;
             transition: all 0.3s ease;
             width: 100%;
-            position: relative;
-            overflow: hidden;
         }
         
         .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
-        }
-        
-        .btn-primary:active:not(:disabled) {
-            transform: translateY(0);
-        }
-        
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
         }
         
         .btn-secondary {
@@ -217,11 +283,6 @@
             50% { opacity: 0.5; }
         }
         
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        
         .slide-up {
             animation: slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -234,51 +295,52 @@
             animation: pulse 2s infinite;
         }
         
-        .bounce-animation {
-            animation: bounce 1s infinite;
+        /* Status Badges */
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
         
-        /* Status Bar */
-        .status-bar {
+        .status-present {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-absent {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .status-picked {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-dropped {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        /* Child List Items */
+        .child-item {
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
         
-        /* Bus Marker */
-        .bus-marker {
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-            transition: all 0.3s ease;
-        }
-        
-        /* Progress Bar */
-        .progress-bar {
-            height: 4px;
-            background: rgba(59, 130, 246, 0.1);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
-            border-radius: 2px;
-            transition: width 0.5s ease;
-        }
-        
-        /* Card Styles */
-        .stat-card {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e5e7eb;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .stat-card:hover {
+        .child-item:hover {
+            border-color: var(--accent-blue);
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
         }
         
         /* Toast Notification */
@@ -294,23 +356,6 @@
             border-left: 4px solid var(--accent-blue);
             max-width: 320px;
             animation: slideUp 0.3s ease-out;
-            display: none;
-        }
-        
-        /* Loading Overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            z-index: 3000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             display: none;
         }
         
@@ -334,7 +379,7 @@
             background: white;
             border-radius: 20px;
             padding: 30px;
-            max-width: 400px;
+            max-width: 500px;
             width: 100%;
             max-height: 80vh;
             overflow-y: auto;
@@ -355,53 +400,191 @@
             border-radius: 10px;
         }
         
-        /* Toggle Switch */
-        .toggle-switch {
-            position: relative;
-            width: 50px;
-            height: 26px;
-        }
-        
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            display: none;
         }
         
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
+        /* Bus Marker */
+        .bus-marker {
+            position: relative;
+        }
+        
+        .bus-marker-inner {
+            position: relative;
+            background: white;
+            padding: 12px;
             border-radius: 50%;
+            border: 4px solid var(--primary-blue);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
         
-        input:checked + .toggle-slider {
-            background-color: var(--accent-blue);
+        .bus-marker-pulse {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: pulse 2s infinite;
         }
         
-        input:checked + .toggle-slider:before {
-            transform: translateX(24px);
+        /* Stop Marker */
+        .stop-marker {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 3px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            background: white;
+        }
+        
+        .stop-marker.completed {
+            background: #10B981 !important;
+            border-color: #10B981 !important;
+            color: white !important;
+        }
+        
+        .stop-marker.current {
+            background: #3B82F6 !important;
+            border-color: #3B82F6 !important;
+            color: white !important;
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Stat Card */
+        .stat-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .stat-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+        
+        /* Progress Bar */
+        .progress-bar {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        /* Route Line */
+        .route-line {
+            stroke-dasharray: 10, 10;
+            animation: dash 20s linear infinite;
+        }
+        
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+        
+        /* Swipe Hint */
+        .swipe-hint {
+            position: absolute;
+            bottom: 100px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .swipe-hint-content {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 12px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .swipe-hint-arrow {
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        /* Offline Indicator */
+        .offline-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ef4444;
+            color: white;
+            text-align: center;
+            padding: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10000;
+            display: none;
         }
     </style>
 </head>
 <body class="bg-gray-100">
+    <!-- Offline Indicator -->
+    <div id="offline-indicator" class="offline-indicator">
+        <i class="fas fa-wifi-slash mr-2"></i>
+        <span id="offline-text">You are offline. Some features may be limited.</span>
+    </div>
+
+    <!-- Language Dropdown -->
+    <div class="language-dropdown" id="languageDropdown">
+        <button class="language-btn" id="languageBtn">
+            <i class="fas fa-globe"></i>
+            <span id="current-language">English</span>
+            <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="language-dropdown-content" id="languageDropdownContent">
+            <div class="language-option" onclick="changeLanguage('en')">
+                <span>🇺🇸 English</span>
+            </div>
+            <div class="language-option" onclick="changeLanguage('sw')">
+                <span>🇹🇿 Kiswahili</span>
+            </div>
+        </div>
+    </div>
 
     <!-- Loading Screen -->
     <div id="loading-screen" class="login-screen">
@@ -410,7 +593,7 @@
                 <i class="fas fa-bus text-4xl" style="background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></i>
             </div>
             <h1 class="text-5xl font-black mb-4 animate__animated animate__fadeInDown">BusTrack</h1>
-            <p class="text-white/90 text-lg mb-12 animate__animated animate__fadeIn animate__delay-1s">Safe journeys, happy parents</p>
+            <p class="text-white/90 text-lg mb-12 animate__animated animate__fadeIn animate__delay-1s" id="loading-subtitle">Safe journeys, happy parents</p>
             
             <div class="w-64 h-2 bg-white/30 rounded-full overflow-hidden mx-auto animate__animated animate__fadeIn animate__delay-2s">
                 <div id="loading-bar" class="h-full bg-white rounded-full w-0 transition-all duration-300"></div>
@@ -425,51 +608,51 @@
                 <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <i class="fas fa-bus text-2xl text-white"></i>
                 </div>
-                <h2 class="text-2xl font-bold text-gray-800">Welcome to BusTrack</h2>
-                <p class="text-gray-600 mt-2">Choose your role to continue</p>
+                <h2 class="text-2xl font-bold text-gray-800" id="login-title">Welcome to BusTrack</h2>
+                <p class="text-gray-600 mt-2" id="login-subtitle">Choose your role to continue</p>
             </div>
             
             <!-- Role Selection -->
             <div class="flex gap-3 mb-6">
                 <div class="role-option" onclick="selectRole('driver')">
                     <i class="fas fa-tachometer-alt role-icon"></i>
-                    <div class="font-semibold text-gray-800">Driver</div>
-                    <div class="text-xs text-gray-500 mt-1">Manage routes</div>
+                    <div class="font-semibold text-gray-800" id="role-driver">Driver</div>
+                    <div class="text-xs text-gray-500 mt-1" id="role-driver-desc">Manage routes</div>
                 </div>
                 <div class="role-option" onclick="selectRole('parent')">
                     <i class="fas fa-user-friends role-icon"></i>
-                    <div class="font-semibold text-gray-800">Parent</div>
-                    <div class="text-xs text-gray-500 mt-1">Track children</div>
+                    <div class="font-semibold text-gray-800" id="role-parent">Parent</div>
+                    <div class="text-xs text-gray-500 mt-1" id="role-parent-desc">Track children</div>
                 </div>
             </div>
             
             <!-- Login Form -->
             <form id="login-form" onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label class="form-label" for="email">Email Address</label>
-                    <input type="email" id="email" class="form-input" placeholder="driver@demo.com" required>
+                    <label class="form-label" for="email" id="label-email">Email Address</label>
+                    <input type="email" id="email" class="form-input" placeholder="driver@school.com" required>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
+                    <label class="form-label" for="password" id="label-password">Password</label>
                     <input type="password" id="password" class="form-input" placeholder="••••••••" required>
                 </div>
                 
                 <div class="form-group flex items-center justify-between">
                     <label class="flex items-center">
                         <input type="checkbox" id="remember-me" class="mr-2">
-                        <span class="text-sm text-gray-600">Remember me</span>
+                        <span class="text-sm text-gray-600" id="remember-me-label">Remember me</span>
                     </label>
-                    <a href="#" onclick="showForgotPassword()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">Forgot password?</a>
+                    <a href="#" onclick="showForgotPassword()" class="text-sm text-blue-600 hover:text-blue-800 font-medium" id="forgot-password-link">Forgot password?</a>
                 </div>
                 
-                <button type="submit" class="btn-primary mb-4">
+                <button type="submit" class="btn-primary mb-4" id="login-button">
                     Sign In
                 </button>
                 
                 <div class="text-center">
-                    <span class="text-gray-600 text-sm">Don't have an account?</span>
-                    <a href="#" onclick="showSignup()" class="text-blue-600 hover:text-blue-800 font-medium text-sm ml-1">Sign up</a>
+                    <span class="text-gray-600 text-sm" id="no-account-text">Don't have an account?</span>
+                    <a href="#" onclick="showSignup()" class="text-blue-600 hover:text-blue-800 font-medium text-sm ml-1" id="signup-link">Sign up</a>
                 </div>
             </form>
         </div>
@@ -496,29 +679,29 @@
                                 <div class="bg-green-500 w-3 h-3 rounded-full absolute top-0 pulse-animation"></div>
                             </div>
                             <div>
-                                <p class="text-xs uppercase tracking-wider text-gray-500 font-bold">ETA</p>
-                                <p class="font-bold text-gray-900"><span id="eta-time">8</span> min</p>
+                                <p class="text-xs uppercase tracking-wider text-gray-500 font-bold" id="status-eta">ETA</p>
+                                <p class="font-bold text-gray-900"><span id="eta-time">--</span> <span id="eta-unit">min</span></p>
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-xs text-gray-500">Next Stop</p>
-                            <p class="text-sm font-bold text-gray-900" id="next-stop-name">Oak Street</p>
+                            <p class="text-xs text-gray-500" id="next-stop-label">Next Stop</p>
+                            <p class="text-sm font-bold text-gray-900" id="next-stop-name">--</p>
                         </div>
                     </div>
                     <div class="progress-bar mt-2">
-                        <div id="route-progress" class="progress-fill" style="width: 40%"></div>
+                        <div id="route-progress" class="progress-fill" style="width: 0%"></div>
                     </div>
                 </div>
                 
                 <div id="driver-status" class="hidden glass-nav rounded-2xl shadow-lg border border-white/30 p-3">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs uppercase tracking-wider text-gray-500 font-bold" id="route-number">Route #402</p>
-                            <p class="text-sm font-bold text-gray-900" id="route-name">Downtown Academy</p>
+                            <p class="text-xs uppercase tracking-wider text-gray-500 font-bold" id="route-number-label">Route</p>
+                            <p class="text-sm font-bold text-gray-900" id="route-name">--</p>
                         </div>
                         <div id="driver-status-badge" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold uppercase">
                             <i class="fas fa-circle text-xs mr-1"></i>
-                            Offline
+                            <span id="status-offline">Offline</span>
                         </div>
                     </div>
                 </div>
@@ -553,15 +736,15 @@
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h2 class="text-xl font-bold text-gray-900" id="driver-route-name">Route #402</h2>
+                        <h2 class="text-xl font-bold text-gray-900" id="driver-route-name">Route</h2>
                         <p class="text-gray-600 text-sm flex items-center gap-2 mt-1">
                             <i class="fas fa-route text-xs"></i>
-                            <span id="driver-destination">Downtown Academy Express</span>
+                            <span id="driver-destination">--</span>
                         </p>
                     </div>
                     <div class="text-right">
                         <div id="current-time" class="text-lg font-black text-gray-900">--:--</div>
-                        <div class="text-xs text-gray-500">Local Time</div>
+                        <div class="text-xs text-gray-500" id="local-time-label">Local Time</div>
                     </div>
                 </div>
                 
@@ -570,50 +753,53 @@
                     <div class="stat-card" onclick="showStudentList()">
                         <div class="flex items-center gap-2 mb-2">
                             <i class="fas fa-user-graduate text-sm text-blue-600"></i>
-                            <p class="text-xs text-blue-600 font-semibold">Students</p>
+                            <p class="text-xs text-blue-600 font-semibold" id="stats-students">Students</p>
                         </div>
-                        <p class="text-2xl font-bold text-blue-900"><span id="student-count">24</span><span class="text-sm text-blue-600">/30</span></p>
-                        <div class="text-xs text-gray-500 mt-1">On board</div>
+                        <p class="text-2xl font-bold text-blue-900"><span id="student-count">0</span><span class="text-sm text-blue-600">/0</span></p>
+                        <div class="text-xs text-gray-500 mt-1" id="on-board-label">On board</div>
                     </div>
                     
                     <div class="stat-card" onclick="showNextStopDetails()">
                         <div class="flex items-center gap-2 mb-2">
                             <i class="fas fa-map-marker-alt text-sm text-yellow-600"></i>
-                            <p class="text-xs text-yellow-600 font-semibold">Next Stop</p>
+                            <p class="text-xs text-yellow-600 font-semibold" id="next-stop-label-card">Next Stop</p>
                         </div>
-                        <p class="text-lg font-bold text-yellow-900" id="driver-next-stop">Oak St.</p>
-                        <div class="text-xs text-gray-500 mt-1" id="next-stop-eta">7 min</div>
+                        <p class="text-lg font-bold text-yellow-900" id="driver-next-stop">--</p>
+                        <div class="text-xs text-gray-500 mt-1" id="next-stop-eta">--</div>
                     </div>
                     
                     <div class="stat-card" onclick="showSchedule()">
                         <div class="flex items-center gap-2 mb-2">
                             <i class="fas fa-clock text-sm text-green-600"></i>
-                            <p class="text-xs text-green-600 font-semibold">On Time</p>
+                            <p class="text-xs text-green-600 font-semibold" id="on-time-label">Status</p>
                         </div>
-                        <p class="text-lg font-bold text-green-900">+2 min</p>
-                        <div class="text-xs text-gray-500 mt-1">Ahead of schedule</div>
+                        <p class="text-lg font-bold text-green-900" id="schedule-status">--</p>
+                        <div class="text-xs text-gray-500 mt-1" id="ahead-schedule-label">Schedule</div>
                     </div>
                 </div>
                 
-                <!-- Route Progress -->
+                <!-- Student Attendance Section -->
                 <div class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-200">
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="font-bold text-gray-900 flex items-center gap-2">
-                            <i class="fas fa-road text-sm"></i>
-                            Route Progress
+                            <i class="fas fa-clipboard-check text-sm"></i>
+                            <span id="attendance-title">Student Attendance</span>
                         </h3>
-                        <button onclick="showFullRoute()" class="text-xs text-blue-600 font-medium hover:text-blue-800">View All</button>
+                        <span class="text-xs text-gray-500" id="present-count">0/0 present</span>
                     </div>
                     
-                    <div class="space-y-3" id="route-stops-list">
-                        <!-- Stops will be populated here -->
+                    <div class="space-y-2 max-h-60 overflow-y-auto" id="student-attendance-list">
+                        <div class="text-center py-8 text-gray-500">
+                            <i class="fas fa-user-graduate text-2xl mb-2"></i>
+                            <p>No students assigned</p>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Action Button -->
                 <button id="toggle-trip" onclick="toggleTrip()" class="btn-primary hover:scale-[1.02] transition-transform">
                     <i class="fas fa-play mr-2"></i>
-                    <span>Start Trip</span>
+                    <span id="start-trip-button">Start Trip</span>
                 </button>
             </div>
             
@@ -621,18 +807,30 @@
             <div id="parent-ui" class="hidden">
                 <!-- Child Info -->
                 <div class="flex items-center gap-4 mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-200">
-                    <img id="child-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Leo" class="w-16 h-16 rounded-2xl shadow-lg" alt="Child">
+                    <img id="child-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Child" class="w-16 h-16 rounded-2xl shadow-lg" alt="Child">
                     <div class="flex-1">
-                        <h2 class="text-xl font-bold text-gray-900" id="child-name">Leo's Journey</h2>
+                        <h2 class="text-xl font-bold text-gray-900" id="child-name">Child's Journey</h2>
                         <p class="text-gray-600 text-sm flex items-center gap-2 mt-1">
                             <i class="fas fa-bus text-xs"></i>
-                            <span id="bus-info">Bus 402 • Driver: Mike</span>
+                            <span id="bus-info">Bus -- • Driver: --</span>
                         </p>
                     </div>
                     <div class="relative" onclick="toggleChildStatus()">
-                        <div class="bg-green-500 w-4 h-4 rounded-full shadow-lg"></div>
-                        <div class="bg-green-500 w-4 h-4 rounded-full absolute top-0 pulse-animation"></div>
+                        <div class="bg-gray-400 w-4 h-4 rounded-full shadow-lg"></div>
                     </div>
+                </div>
+                
+                <!-- Child Status Controls -->
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <button onclick="markChildPicked()" class="stat-card text-center hover:scale-105 transition-transform" id="picked-button">
+                        <i class="fas fa-hand-paper text-blue-600 text-lg mb-2"></i>
+                        <p class="text-xs font-semibold text-gray-900">Picked Up</p>
+                    </button>
+                    
+                    <button onclick="markChildDropped()" class="stat-card text-center hover:scale-105 transition-transform" id="dropped-button">
+                        <i class="fas fa-home text-green-600 text-lg mb-2"></i>
+                        <p class="text-xs font-semibold text-gray-900">Dropped Off</p>
+                    </button>
                 </div>
                 
                 <!-- Quick Stats -->
@@ -640,42 +838,45 @@
                     <div class="stat-card">
                         <div class="flex items-center gap-2 mb-2">
                             <i class="fas fa-route text-sm text-blue-600"></i>
-                            <p class="text-xs text-blue-600 font-semibold">Distance</p>
+                            <p class="text-xs text-blue-600 font-semibold" id="distance-label">Distance</p>
                         </div>
-                        <p class="text-xl font-bold text-blue-900">2.4<span class="text-sm text-blue-600"> mi</span></p>
+                        <p class="text-xl font-bold text-blue-900">--<span class="text-sm text-blue-600"> km</span></p>
                     </div>
                     
                     <div class="stat-card">
                         <div class="flex items-center gap-2 mb-2">
                             <i class="fas fa-clock text-sm text-yellow-600"></i>
-                            <p class="text-xs text-yellow-600 font-semibold">ETA</p>
+                            <p class="text-xs text-yellow-600 font-semibold" id="eta-label">ETA</p>
                         </div>
-                        <p class="text-xl font-bold text-yellow-900" id="parent-eta">8<span class="text-sm text-yellow-600"> min</span></p>
+                        <p class="text-xl font-bold text-yellow-900" id="parent-eta">--<span class="text-sm text-yellow-600"> min</span></p>
                     </div>
                     
                     <div class="stat-card">
                         <div class="flex items-center gap-2 mb-2">
                             <i class="fas fa-temperature-high text-sm text-green-600"></i>
-                            <p class="text-xs text-green-600 font-semibold">Temp</p>
+                            <p class="text-xs text-green-600 font-semibold" id="temp-label">Status</p>
                         </div>
-                        <p class="text-xl font-bold text-green-900">72°<span class="text-sm text-green-600">F</span></p>
+                        <p class="text-xl font-bold text-green-900" id="child-status">--</p>
                     </div>
                 </div>
                 
                 <!-- Journey Timeline -->
                 <div class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-200">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-bold text-gray-900">Today's Journey</h3>
-                        <span class="text-xs text-gray-500" id="journey-status">On time</span>
+                        <h3 class="font-bold text-gray-900" id="journey-title">Today's Journey</h3>
+                        <span class="text-xs text-gray-500" id="journey-status">--</span>
                     </div>
                     
                     <div class="relative">
                         <!-- Timeline line -->
-                        <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 to-green-500"></div>
+                        <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-300"></div>
                         
                         <!-- Timeline items -->
                         <div class="space-y-6" id="timeline-items">
-                            <!-- Timeline items will be populated here -->
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-route text-2xl mb-2"></i>
+                                <p>No journey data available</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -684,20 +885,28 @@
                 <div class="grid grid-cols-3 gap-3">
                     <button onclick="callDriver()" class="stat-card text-center hover:scale-105 transition-transform">
                         <i class="fas fa-phone-alt text-blue-600 text-lg mb-2"></i>
-                        <p class="text-xs font-semibold text-gray-900">Call Driver</p>
+                        <p class="text-xs font-semibold text-gray-900" id="call-driver-button">Call Driver</p>
                     </button>
                     
                     <button onclick="showNotifications()" class="stat-card text-center hover:scale-105 transition-transform">
                         <i class="fas fa-bell text-yellow-600 text-lg mb-2"></i>
-                        <p class="text-xs font-semibold text-gray-900">Alerts</p>
+                        <p class="text-xs font-semibold text-gray-900" id="alerts-button">Alerts</p>
                     </button>
                     
                     <button onclick="showHistory()" class="stat-card text-center hover:scale-105 transition-transform">
                         <i class="fas fa-history text-green-600 text-lg mb-2"></i>
-                        <p class="text-xs font-semibold text-gray-900">History</p>
+                        <p class="text-xs font-semibold text-gray-900" id="history-button">History</p>
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Swipe Hint -->
+    <div id="swipe-hint" class="swipe-hint hidden">
+        <div class="swipe-hint-content animate__animated animate__fadeInUp">
+            <i class="fas fa-arrow-up text-blue-600 swipe-hint-arrow"></i>
+            <span id="swipe-hint-text">Swipe up for more details</span>
         </div>
     </div>
 
@@ -721,35 +930,11 @@
         <p class="text-gray-700 font-medium" id="loading-text">Loading...</p>
     </div>
 
-    <!-- Forgot Password Modal -->
-    <div id="forgot-password-modal" class="modal">
-        <div class="modal-content animate__animated animate__fadeInUp">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">Reset Password</h3>
-                <button onclick="hideForgotPassword()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="reset-email">Email Address</label>
-                <input type="email" id="reset-email" class="form-input" placeholder="Enter your email">
-            </div>
-            
-            <p class="text-sm text-gray-600 mb-6">
-                We'll send you a link to reset your password.
-            </p>
-            
-            <button onclick="sendResetLink()" class="btn-primary mb-4 hover:scale-[1.02] transition-transform">Send Reset Link</button>
-            <button onclick="hideForgotPassword()" class="btn-secondary hover:scale-[1.02] transition-transform">Cancel</button>
-        </div>
-    </div>
-
     <!-- Sign Up Modal -->
     <div id="signup-modal" class="modal">
         <div class="modal-content animate__animated animate__fadeInUp">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">Create Account</h3>
+                <h3 class="text-xl font-bold text-gray-900" id="signup-title">Create Account</h3>
                 <button onclick="hideSignup()" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times"></i>
                 </button>
@@ -757,49 +942,102 @@
             
             <form id="signup-form">
                 <div class="form-group">
-                    <label class="form-label">Role</label>
+                    <label class="form-label" id="signup-role-label">Role</label>
                     <div class="flex gap-3">
                         <div class="role-option" onclick="selectSignupRole('driver')">
                             <i class="fas fa-tachometer-alt role-icon"></i>
-                            <div class="font-semibold text-gray-800">Driver</div>
+                            <div class="font-semibold text-gray-800" id="signup-driver">Driver</div>
                         </div>
                         <div class="role-option" onclick="selectSignupRole('parent')">
                             <i class="fas fa-user-friends role-icon"></i>
-                            <div class="font-semibold text-gray-800">Parent</div>
+                            <div class="font-semibold text-gray-800" id="signup-parent">Parent</div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="signup-name">Full Name</label>
-                    <input type="text" id="signup-name" class="form-input" placeholder="Enter your full name">
+                    <label class="form-label" for="signup-name" id="signup-name-label">Full Name</label>
+                    <input type="text" id="signup-name" class="form-input" placeholder="Enter your full name" required>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="signup-email">Email Address</label>
-                    <input type="email" id="signup-email" class="form-input" placeholder="Enter your email">
+                    <label class="form-label" for="signup-email" id="signup-email-label">Email Address</label>
+                    <input type="email" id="signup-email" class="form-input" placeholder="Enter your email" required>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="signup-password">Password</label>
-                    <input type="password" id="signup-password" class="form-input" placeholder="Create a password">
+                    <label class="form-label" for="signup-password" id="signup-password-label">Password</label>
+                    <input type="password" id="signup-password" class="form-input" placeholder="Create password" required minlength="6">
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="signup-confirm">Confirm Password</label>
-                    <input type="password" id="signup-confirm" class="form-input" placeholder="Confirm password">
+                    <label class="form-label" for="signup-confirm" id="signup-confirm-label">Confirm Password</label>
+                    <input type="password" id="signup-confirm" class="form-input" placeholder="Confirm password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="signup-phone" id="signup-phone-label">Phone Number</label>
+                    <input type="tel" id="signup-phone" class="form-input" placeholder="+255 XXX XXX XXX" required>
+                </div>
+                
+                <!-- Child Details Section (for parents only) -->
+                <div id="child-details-section" class="hidden">
+                    <div class="border-t border-gray-200 my-4 pt-4">
+                        <h4 class="font-semibold text-gray-800 mb-3" id="child-details-title">Child Details</h4>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="child-name-input" id="child-name-label">Child's Name</label>
+                            <input type="text" id="child-name-input" class="form-input" placeholder="Child's name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="child-grade" id="child-grade-label">Grade</label>
+                            <select id="child-grade" class="form-input" required>
+                                <option value="">Select grade</option>
+                                <option value="1">Grade 1</option>
+                                <option value="2">Grade 2</option>
+                                <option value="3">Grade 3</option>
+                                <option value="4">Grade 4</option>
+                                <option value="5">Grade 5</option>
+                                <option value="6">Grade 6</option>
+                                <option value="7">Grade 7</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="child-school" id="child-school-label">School</label>
+                            <select id="child-school" class="form-input" required>
+                                <option value="">Select school</option>
+                                <option value="downtown">Downtown School</option>
+                                <option value="lincoln">Lincoln School</option>
+                                <option value="central">Central School</option>
+                                <option value="primary">Primary School</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="child-bus" id="child-bus-label">Bus Number</label>
+                            <select id="child-bus" class="form-input" required>
+                                <option value="">Select bus</option>
+                                <option value="BUS-101">Bus 101</option>
+                                <option value="BUS-102">Bus 102</option>
+                                <option value="BUS-103">Bus 103</option>
+                                <option value="BUS-104">Bus 104</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-group">
                     <label class="flex items-center">
-                        <input type="checkbox" id="terms" class="mr-2">
-                        <span class="text-sm text-gray-600">I agree to the <a href="#" onclick="showTerms()" class="text-blue-600">Terms & Conditions</a></span>
+                        <input type="checkbox" id="terms" class="mr-2" required>
+                        <span class="text-sm text-gray-600" id="terms-label">I agree to the <a href="#" onclick="showTerms()" class="text-blue-600">Terms & Conditions</a></span>
                     </label>
                 </div>
             </form>
             
-            <button onclick="createAccount()" class="btn-primary mb-4 hover:scale-[1.02] transition-transform">Create Account</button>
-            <button onclick="hideSignup()" class="btn-secondary hover:scale-[1.02] transition-transform">Cancel</button>
+            <button onclick="createAccount()" class="btn-primary mb-4 hover:scale-[1.02] transition-transform" id="signup-create-button">Create Account</button>
+            <button onclick="hideSignup()" class="btn-secondary hover:scale-[1.02] transition-transform" id="signup-cancel-button">Cancel</button>
         </div>
     </div>
 
@@ -808,260 +1046,61 @@
         <div class="modal-content animate__animated animate__fadeInUp">
             <div class="text-center mb-6">
                 <img id="user-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="w-20 h-20 rounded-full mx-auto mb-4 border-4 border-white shadow-lg" alt="User">
-                <h3 class="text-xl font-bold text-gray-900" id="user-name">John Driver</h3>
-                <p class="text-gray-600 text-sm" id="user-role">Driver</p>
+                <h3 class="text-xl font-bold text-gray-900" id="user-name">--</h3>
+                <p class="text-gray-600 text-sm" id="user-role">--</p>
             </div>
             
             <div class="space-y-2">
                 <button onclick="showProfile()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100 transition-colors">
                     <i class="fas fa-user text-gray-600"></i>
-                    <span class="font-medium text-gray-800">Profile</span>
+                    <span class="font-medium text-gray-800" id="menu-profile">Profile</span>
                 </button>
                 
                 <button onclick="showSettings()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100 transition-colors">
                     <i class="fas fa-cog text-gray-600"></i>
-                    <span class="font-medium text-gray-800">Settings</span>
+                    <span class="font-medium text-gray-800" id="menu-settings">Settings</span>
                 </button>
                 
                 <button onclick="showHelp()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100 transition-colors">
                     <i class="fas fa-question-circle text-gray-600"></i>
-                    <span class="font-medium text-gray-800">Help & Support</span>
+                    <span class="font-medium text-gray-800" id="menu-help">Help & Support</span>
                 </button>
                 
                 <div class="border-t border-gray-200 my-3"></div>
                 
                 <button onclick="logout()" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 text-red-600 transition-colors">
                     <i class="fas fa-sign-out-alt"></i>
-                    <span class="font-medium">Log Out</span>
+                    <span class="font-medium" id="menu-logout">Log Out</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Profile Modal -->
-    <div id="profile-modal" class="modal">
+    <!-- Student List Modal -->
+    <div id="student-list-modal" class="modal">
         <div class="modal-content animate__animated animate__fadeInUp">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">My Profile</h3>
-                <button onclick="hideProfile()" class="text-gray-400 hover:text-gray-600">
+                <h3 class="text-xl font-bold text-gray-900" id="student-list-title">Student List</h3>
+                <button onclick="hideStudentList()" class="text-gray-400 hover:text-gray-600">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
-            <div class="text-center mb-6">
-                <img id="profile-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-white shadow-lg" alt="User">
-                <h4 class="text-lg font-bold text-gray-900" id="profile-name">John Driver</h4>
-                <p class="text-gray-600 text-sm" id="profile-email">driver@demo.com</p>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="form-group">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" id="profile-name-input" class="form-input" value="John Driver">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Email Address</label>
-                    <input type="email" id="profile-email-input" class="form-input" value="driver@demo.com" readonly>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Phone Number</label>
-                    <input type="tel" id="profile-phone" class="form-input" placeholder="+1 (555) 123-4567">
+            <div class="space-y-2 max-h-96 overflow-y-auto" id="student-list">
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-user-graduate text-2xl mb-2"></i>
+                    <p>No students available</p>
                 </div>
             </div>
             
-            <button onclick="updateProfile()" class="btn-primary mt-6 hover:scale-[1.02] transition-transform">Update Profile</button>
-        </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal">
-        <div class="modal-content animate__animated animate__fadeInUp">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">Settings</h3>
-                <button onclick="hideSettings()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
+            <div class="mt-4 flex gap-3">
+                <button onclick="markAllPresent()" class="btn-primary flex-1 hover:scale-[1.02] transition-transform" id="mark-all-present-button">
+                    Mark All Present
+                </button>
+                <button onclick="hideStudentList()" class="btn-secondary flex-1 hover:scale-[1.02] transition-transform" id="close-list-button">
+                    Close
                 </button>
             </div>
-            
-            <div class="space-y-6">
-                <div>
-                    <h4 class="font-semibold text-gray-800 mb-3">Notifications</h4>
-                    <div class="space-y-3">
-                        <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <span class="text-gray-700">Push Notifications</span>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="push-notifications" checked>
-                                <span class="toggle-slider"></span>
-                            </div>
-                        </label>
-                        <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <span class="text-gray-700">Email Updates</span>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="email-updates" checked>
-                                <span class="toggle-slider"></span>
-                            </div>
-                        </label>
-                        <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <span class="text-gray-700">Sound Alerts</span>
-                            <div class="toggle-switch">
-                                <input type="checkbox" id="sound-alerts" checked>
-                                <span class="toggle-slider"></span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold text-gray-800 mb-3">Map Preferences</h4>
-                    <div class="space-y-3">
-                        <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <span class="text-gray-700">Map Theme</span>
-                            <select id="map-style" class="border-none bg-transparent text-gray-600 focus:outline-none">
-                                <option value="light">Light</option>
-                                <option value="dark">Dark</option>
-                                <option value="satellite">Satellite</option>
-                            </select>
-                        </label>
-                        <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                            <span class="text-gray-700">Auto-refresh</span>
-                            <select id="refresh-interval" class="border-none bg-transparent text-gray-600 focus:outline-none">
-                                <option value="30">30 seconds</option>
-                                <option value="60" selected>1 minute</option>
-                                <option value="300">5 minutes</option>
-                                <option value="0">Manual</option>
-                            </select>
-                        </label>
-                    </div>
-                </div>
-                
-                <div>
-                    <h4 class="font-semibold text-gray-800 mb-3">Data Management</h4>
-                    <div class="space-y-3">
-                        <button onclick="exportData()" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 text-blue-600 font-medium">
-                            <i class="fas fa-download mr-2"></i>Export All Data
-                        </button>
-                        <button onclick="showImportData()" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 text-blue-600 font-medium">
-                            <i class="fas fa-upload mr-2"></i>Import Data
-                        </button>
-                        <button onclick="clearAllData()" class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-gray-50 text-red-600 font-medium">
-                            <i class="fas fa-trash mr-2"></i>Clear All Data
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <button onclick="saveSettings()" class="btn-primary mt-6 hover:scale-[1.02] transition-transform">Save Settings</button>
-        </div>
-    </div>
-
-    <!-- Help Modal -->
-    <div id="help-modal" class="modal">
-        <div class="modal-content animate__animated animate__fadeInUp">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">Help & Support</h3>
-                <button onclick="hideHelp()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="p-4 bg-blue-50 rounded-lg">
-                    <h4 class="font-semibold text-gray-800 mb-2"><i class="fas fa-info-circle text-blue-500 mr-2"></i>How to Use BusTrack</h4>
-                    <ul class="text-sm text-gray-600 space-y-1">
-                        <li>• Drivers: Start/stop trips and track routes</li>
-                        <li>• Parents: Monitor your child's bus in real-time</li>
-                        <li>• Click on bus markers for details</li>
-                        <li>• Use the bottom sheet for controls</li>
-                    </ul>
-                </div>
-                
-                <div class="p-4 bg-green-50 rounded-lg">
-                    <h4 class="font-semibold text-gray-800 mb-2"><i class="fas fa-question-circle text-green-500 mr-2"></i>Frequently Asked Questions</h4>
-                    <div class="space-y-3">
-                        <details class="text-sm">
-                            <summary class="font-medium text-gray-700 cursor-pointer">How accurate is the tracking?</summary>
-                            <p class="text-gray-600 mt-1">Tracking updates every 30 seconds for real-time accuracy.</p>
-                        </details>
-                        <details class="text-sm">
-                            <summary class="font-medium text-gray-700 cursor-pointer">Can I track multiple children?</summary>
-                            <p class="text-gray-600 mt-1">Yes, you can add multiple children in your profile.</p>
-                        </details>
-                    </div>
-                </div>
-                
-                <div class="p-4 bg-yellow-50 rounded-lg">
-                    <h4 class="font-semibold text-gray-800 mb-2"><i class="fas fa-phone-alt text-yellow-500 mr-2"></i>Contact Support</h4>
-                    <p class="text-sm text-gray-600">Email: support@bustrack.com</p>
-                    <p class="text-sm text-gray-600">Phone: 1-800-BUS-TRACK</p>
-                </div>
-            </div>
-            
-            <button onclick="hideHelp()" class="btn-primary mt-6 hover:scale-[1.02] transition-transform">Close</button>
-        </div>
-    </div>
-
-    <!-- History Modal -->
-    <div id="history-modal" class="modal">
-        <div class="modal-content animate__animated animate__fadeInUp">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">Trip History</h3>
-                <button onclick="hideHistory()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="space-y-3" id="history-list">
-                <!-- History items will be populated here -->
-            </div>
-            
-            <button onclick="clearHistory()" class="btn-secondary mt-6 hover:scale-[1.02] transition-transform">Clear History</button>
-        </div>
-    </div>
-
-    <!-- Import Data Modal -->
-    <div id="import-modal" class="modal">
-        <div class="modal-content animate__animated animate__fadeInUp">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">Import Data</h3>
-                <button onclick="hideImport()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Upload JSON File</label>
-                <input type="file" id="import-file" class="form-input" accept=".json">
-            </div>
-            
-            <p class="text-sm text-gray-600 mb-6">
-                Upload a previously exported JSON file to restore your data.
-            </p>
-            
-            <button onclick="importData()" class="btn-primary mb-4 hover:scale-[1.02] transition-transform">Import Data</button>
-            <button onclick="hideImport()" class="btn-secondary hover:scale-[1.02] transition-transform">Cancel</button>
-        </div>
-    </div>
-
-    <!-- Terms Modal -->
-    <div id="terms-modal" class="modal">
-        <div class="modal-content animate__animated animate__fadeInUp">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">Terms & Conditions</h3>
-                <button onclick="hideTerms()" class="text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="prose max-h-96 overflow-y-auto">
-                <p class="text-sm text-gray-600 mb-4">
-                    By using BusTrack, you agree to our terms and conditions...
-                </p>
-                <!-- Add full terms content here -->
-            </div>
-            
-            <button onclick="hideTerms()" class="btn-primary mt-6 hover:scale-[1.02] transition-transform">I Agree</button>
         </div>
     </div>
 
@@ -1070,14 +1109,208 @@
         <button onclick="locateBus()" class="w-14 h-14 glass-nav rounded-2xl shadow-xl border border-white/30 flex items-center justify-center hover:scale-110 transition-transform">
             <i class="fas fa-location-arrow text-gray-700"></i>
         </button>
+        <button onclick="shareLocation()" class="w-14 h-14 glass-nav rounded-2xl shadow-xl border border-white/30 flex items-center justify-center hover:scale-110 transition-transform" id="share-location-btn">
+            <i class="fas fa-share-alt text-gray-700"></i>
+        </button>
     </div>
 
     <script>
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            APP_NAME: 'BusTrack',
+            VERSION: '1.0.0',
+            DEFAULT_LOCATION: {
+                lat: -6.7924,
+                lng: 39.2083,
+                zoom: 13
+            },
+            REFRESH_INTERVAL: 10000, // 10 seconds
+            LOCATION_ACCURACY: 10, // meters
+            MAX_LOCATION_AGE: 30000, // 30 seconds
+            OFFLINE_TIMEOUT: 5000 // 5 seconds
+        };
+
+        // ==================== LANGUAGE MANAGEMENT ====================
+        const translations = {
+            en: {
+                // Loading screen
+                'loading-subtitle': 'Safe journeys, happy parents',
+                'login-title': 'Welcome to BusTrack',
+                'login-subtitle': 'Choose your role to continue',
+                'role-driver': 'Driver',
+                'role-driver-desc': 'Manage routes',
+                'role-parent': 'Parent',
+                'role-parent-desc': 'Track children',
+                'label-email': 'Email Address',
+                'label-password': 'Password',
+                'remember-me-label': 'Remember me',
+                'forgot-password-link': 'Forgot password?',
+                'login-button': 'Sign In',
+                'no-account-text': 'Don\'t have an account?',
+                'signup-link': 'Sign up',
+                // Status labels
+                'status-eta': 'ETA',
+                'eta-unit': 'min',
+                'next-stop-label': 'Next Stop',
+                'route-number-label': 'Route',
+                'status-offline': 'Offline',
+                'status-online': 'Online',
+                'local-time-label': 'Local Time',
+                'stats-students': 'Students',
+                'on-board-label': 'On board',
+                'next-stop-label-card': 'Next Stop',
+                'on-time-label': 'Status',
+                'ahead-schedule-label': 'Schedule',
+                'attendance-title': 'Student Attendance',
+                'present-count': '0/0 present',
+                'start-trip-button': 'Start Trip',
+                'stop-trip-button': 'Stop Trip',
+                'child-name': 'Child\'s Journey',
+                'bus-info': 'Bus -- • Driver: --',
+                'picked-button': 'Picked Up',
+                'dropped-button': 'Dropped Off',
+                'distance-label': 'Distance',
+                'eta-label': 'ETA',
+                'temp-label': 'Status',
+                'journey-title': 'Today\'s Journey',
+                'journey-status': '--',
+                'call-driver-button': 'Call Driver',
+                'alerts-button': 'Alerts',
+                'history-button': 'History',
+                // Sign up modal
+                'signup-title': 'Create Account',
+                'signup-role-label': 'Role',
+                'signup-driver': 'Driver',
+                'signup-parent': 'Parent',
+                'signup-name-label': 'Full Name',
+                'signup-email-label': 'Email Address',
+                'signup-password-label': 'Password',
+                'signup-confirm-label': 'Confirm Password',
+                'signup-phone-label': 'Phone Number',
+                'child-details-title': 'Child Details',
+                'child-name-label': 'Child\'s Name',
+                'child-grade-label': 'Grade',
+                'child-school-label': 'School',
+                'child-bus-label': 'Bus Number',
+                'terms-label': 'I agree to the Terms & Conditions',
+                'signup-create-button': 'Create Account',
+                'signup-cancel-button': 'Cancel',
+                // User menu
+                'menu-profile': 'Profile',
+                'menu-settings': 'Settings',
+                'menu-help': 'Help & Support',
+                'menu-logout': 'Log Out',
+                // Student list
+                'student-list-title': 'Student List',
+                'mark-all-present-button': 'Mark All Present',
+                'close-list-button': 'Close',
+                // Toast messages
+                'loading-text': 'Loading...',
+                'offline-text': 'You are offline. Some features may be limited.',
+                'swipe-hint-text': 'Swipe up for more details',
+                // Status messages
+                'status-waiting': 'Waiting',
+                'status-picked': 'Picked Up',
+                'status-dropped': 'Dropped Off',
+                'status-ontime': 'On Time',
+                'status-delayed': 'Delayed',
+                'status-ahead': 'Ahead',
+                'status-notstarted': 'Not Started'
+            },
+            sw: {
+                // Loading screen
+                'loading-subtitle': 'Safari salama, wazazi wenye furaha',
+                'login-title': 'Karibu BusTrack',
+                'login-subtitle': 'Chagua jukumu lako kuendelea',
+                'role-driver': 'Dereva',
+                'role-driver-desc': 'Dhibiti njia',
+                'role-parent': 'Mzazi',
+                'role-parent-desc': 'Fuatilia watoto',
+                'label-email': 'Barua pepe',
+                'label-password': 'Nenosiri',
+                'remember-me-label': 'Nikumbuke',
+                'forgot-password-link': 'Umesahau nenosiri?',
+                'login-button': 'Ingia',
+                'no-account-text': 'Huna akaunti?',
+                'signup-link': 'Jisajili',
+                // Status labels
+                'status-eta': 'ETA',
+                'eta-unit': 'dak',
+                'next-stop-label': 'Kituo kifuatacho',
+                'route-number-label': 'Njia',
+                'status-offline': 'Haijaandaliwa',
+                'status-online': 'Imeandaliwa',
+                'local-time-label': 'Muda wa ndani',
+                'stats-students': 'Wanafunzi',
+                'on-board-label': 'Kwenye basi',
+                'next-stop-label-card': 'Kituo kifuatacho',
+                'on-time-label': 'Hali',
+                'ahead-schedule-label': 'Ratiba',
+                'attendance-title': 'Ukaguzi wa Uwepo',
+                'present-count': '0/0 wapo',
+                'start-trip-button': 'Anza Safari',
+                'stop-trip-button': 'Acha Safari',
+                'child-name': 'Safari ya Mtoto',
+                'bus-info': 'Basi -- • Dereva: --',
+                'picked-button': 'Amepokewa',
+                'dropped-button': 'Ameachwa',
+                'distance-label': 'Umbali',
+                'eta-label': 'ETA',
+                'temp-label': 'Hali',
+                'journey-title': 'Safari ya Leo',
+                'journey-status': '--',
+                'call-driver-button': 'Piga Dereva',
+                'alerts-button': 'Arifa',
+                'history-button': 'Historia',
+                // Sign up modal
+                'signup-title': 'Jisajili Akaunti',
+                'signup-role-label': 'Jukumu',
+                'signup-driver': 'Dereva',
+                'signup-parent': 'Mzazi',
+                'signup-name-label': 'Jina kamili',
+                'signup-email-label': 'Barua pepe',
+                'signup-password-label': 'Nenosiri',
+                'signup-confirm-label': 'Thibitisha Nenosiri',
+                'signup-phone-label': 'Namba ya simu',
+                'child-details-title': 'Maelezo ya Mtoto',
+                'child-name-label': 'Jina la mtoto',
+                'child-grade-label': 'Darasa',
+                'child-school-label': 'Shule',
+                'child-bus-label': 'Namba ya basi',
+                'terms-label': 'Nakubali Sheria na Masharti',
+                'signup-create-button': 'Unda Akaunti',
+                'signup-cancel-button': 'Ghairi',
+                // User menu
+                'menu-profile': 'Wasifu',
+                'menu-settings': 'Mipangilio',
+                'menu-help': 'Usaidizi',
+                'menu-logout': 'Toka',
+                // Student list
+                'student-list-title': 'Orodha ya Wanafunzi',
+                'mark-all-present-button': 'Weka Wote Wapo',
+                'close-list-button': 'Funga',
+                // Toast messages
+                'loading-text': 'Inapakia...',
+                'offline-text': 'Uko nje ya mtandao. Baadhi ya huduma zinaweza kuwa na mipaka.',
+                'swipe-hint-text': 'Sogeza juu kwa maelezo zaidi',
+                // Status messages
+                'status-waiting': 'Inasubiri',
+                'status-picked': 'Imepokewa',
+                'status-dropped': 'Imeachwa',
+                'status-ontime': 'Kwa Wakati',
+                'status-delayed': 'Imechelewa',
+                'status-ahead': 'Mbele',
+                'status-notstarted': 'Haijaanza'
+            }
+        };
+
+        let currentLanguage = 'sw'; // Default to Swahili for Tanzania
+
         // ==================== APPLICATION STATE ====================
-        let map;
-        let busMarker;
+        let map = null;
+        let busMarker = null;
         let stopMarkers = [];
-        let routeLine;
+        let routeLine = null;
         let currentUser = null;
         let currentRole = null;
         let selectedRole = null;
@@ -1086,271 +1319,77 @@
         let currentTrip = null;
         let routeStops = [];
         let currentStopIndex = 0;
-        let busLatLng = [40.7128, -74.006];
-        let refreshTimer = null;
-        let tripSimulation = null;
-        let etaTimer = null;
-
-        // ==================== LOCAL STORAGE MANAGER ====================
-        const StorageManager = {
-            // Initialize demo data
-            initDemoData() {
-                // Demo users
-                const demoUsers = {
-                    'driver@demo.com': {
-                        id: 'driver_001',
-                        email: 'driver@demo.com',
-                        password: 'driver123',
-                        name: 'Mike Johnson',
-                        role: 'driver',
-                        phone: '+1 (555) 123-4567',
-                        route: 'Route #402',
-                        busNumber: 'BUS-402',
-                        avatarSeed: 'MikeDriver',
-                        createdAt: new Date().toISOString()
-                    },
-                    'parent@demo.com': {
-                        id: 'parent_001',
-                        email: 'parent@demo.com',
-                        password: 'parent123',
-                        name: 'Sarah Miller',
-                        role: 'parent',
-                        phone: '+1 (555) 987-6543',
-                        children: [{
-                            id: 'child_001',
-                            name: 'Leo Miller',
-                            grade: '3rd Grade',
-                            school: 'Lincoln Elementary',
-                            avatarSeed: 'LeoMiller',
-                            busNumber: 'BUS-402'
-                        }],
-                        avatarSeed: 'SarahParent',
-                        createdAt: new Date().toISOString()
-                    }
-                };
-
-                // Demo route
-                const demoRoute = {
-                    'BUS-402': {
-                        id: 'route_402',
-                        number: '402',
-                        name: 'Downtown Academy Express',
-                        driver: 'Mike Johnson',
-                        totalSeats: 30,
-                        stops: [
-                            { id: 1, name: "7th Avenue", lat: 40.713, lng: -74.008, order: 1, students: 12 },
-                            { id: 2, name: "Oak Street", lat: 40.714, lng: -74.004, order: 2, students: 5 },
-                            { id: 3, name: "Maple Drive", lat: 40.716, lng: -74.002, order: 3, students: 7 },
-                            { id: 4, name: "Pine Road", lat: 40.717, lng: -74.000, order: 4, students: 3 },
-                            { id: 5, name: "Lincoln Elementary", lat: 40.718, lng: -73.998, order: 5, students: 0 }
-                        ]
-                    }
-                };
-
-                // Initialize localStorage if empty
-                if (!localStorage.getItem('busTrack_users')) {
-                    localStorage.setItem('busTrack_users', JSON.stringify(demoUsers));
-                }
-
-                if (!localStorage.getItem('busTrack_routes')) {
-                    localStorage.setItem('busTrack_routes', JSON.stringify(demoRoute));
-                }
-
-                if (!localStorage.getItem('busTrack_trips')) {
-                    localStorage.setItem('busTrack_trips', JSON.stringify([]));
-                }
-
-                if (!localStorage.getItem('busTrack_notifications')) {
-                    const demoNotifications = [
-                        {
-                            id: 1,
-                            type: 'info',
-                            title: 'Welcome to BusTrack!',
-                            message: 'Your account has been created successfully.',
-                            timestamp: new Date().toISOString(),
-                            read: true
-                        },
-                        {
-                            id: 2,
-                            type: 'success',
-                            title: 'Bus On Time',
-                            message: 'Bus 402 is running on schedule today.',
-                            timestamp: new Date().toISOString(),
-                            read: false
-                        }
-                    ];
-                    localStorage.setItem('busTrack_notifications', JSON.stringify(demoNotifications));
-                }
-
-                if (!localStorage.getItem('busTrack_settings')) {
-                    const defaultSettings = {
-                        pushNotifications: true,
-                        emailUpdates: true,
-                        soundAlerts: true,
-                        mapStyle: 'light',
-                        refreshInterval: 60,
-                        theme: 'blue'
-                    };
-                    localStorage.setItem('busTrack_settings', JSON.stringify(defaultSettings));
-                }
-            },
-
-            // User management
-            getUser(email) {
-                const users = JSON.parse(localStorage.getItem('busTrack_users') || '{}');
-                return users[email];
-            },
-
-            saveUser(user) {
-                const users = JSON.parse(localStorage.getItem('busTrack_users') || '{}');
-                users[user.email] = user;
-                localStorage.setItem('busTrack_users', JSON.stringify(users));
-            },
-
-            // Session management
-            saveSession(user) {
-                const session = {
-                    userId: user.id,
-                    email: user.email,
-                    role: user.role,
-                    name: user.name,
-                    loginTime: new Date().toISOString()
-                };
-                localStorage.setItem('busTrack_session', JSON.stringify(session));
-            },
-
-            getSession() {
-                return JSON.parse(localStorage.getItem('busTrack_session'));
-            },
-
-            clearSession() {
-                localStorage.removeItem('busTrack_session');
-            },
-
-            // Trip management
-            getTrips(limit = 10) {
-                const trips = JSON.parse(localStorage.getItem('busTrack_trips') || '[]');
-                return trips.slice(0, limit);
-            },
-
-            saveTrip(trip) {
-                const trips = JSON.parse(localStorage.getItem('busTrack_trips') || '[]');
-                trip.id = 'trip_' + Date.now();
-                trip.timestamp = new Date().toISOString();
-                trips.unshift(trip);
-                localStorage.setItem('busTrack_trips', JSON.stringify(trips.slice(0, 50))); // Keep last 50 trips
-            },
-
-            clearTrips() {
-                localStorage.setItem('busTrack_trips', JSON.stringify([]));
-            },
-
-            // Route management
-            getRoute(busNumber) {
-                const routes = JSON.parse(localStorage.getItem('busTrack_routes') || '{}');
-                return routes[busNumber];
-            },
-
-            // Notification management
-            getNotifications() {
-                return JSON.parse(localStorage.getItem('busTrack_notifications') || '[]');
-            },
-
-            addNotification(notification) {
-                const notifications = this.getNotifications();
-                notification.id = 'notif_' + Date.now();
-                notification.timestamp = new Date().toISOString();
-                notification.read = false;
-                notifications.unshift(notification);
-                localStorage.setItem('busTrack_notifications', JSON.stringify(notifications.slice(0, 100)));
-            },
-
-            markAllAsRead() {
-                const notifications = this.getNotifications();
-                notifications.forEach(notif => notif.read = true);
-                localStorage.setItem('busTrack_notifications', JSON.stringify(notifications));
-            },
-
-            clearNotifications() {
-                localStorage.setItem('busTrack_notifications', JSON.stringify([]));
-            },
-
-            // Settings management
-            getSettings() {
-                return JSON.parse(localStorage.getItem('busTrack_settings') || '{}');
-            },
-
-            saveSettings(settings) {
-                localStorage.setItem('busTrack_settings', JSON.stringify(settings));
-            },
-
-            // Data export/import
-            exportData() {
-                const data = {
-                    users: JSON.parse(localStorage.getItem('busTrack_users') || '{}'),
-                    routes: JSON.parse(localStorage.getItem('busTrack_routes') || '{}'),
-                    trips: JSON.parse(localStorage.getItem('busTrack_trips') || '[]'),
-                    notifications: JSON.parse(localStorage.getItem('busTrack_notifications') || '[]'),
-                    settings: JSON.parse(localStorage.getItem('busTrack_settings') || '{}'),
-                    exportDate: new Date().toISOString()
-                };
-                return JSON.stringify(data, null, 2);
-            },
-
-            importData(jsonData) {
-                try {
-                    const data = JSON.parse(jsonData);
-                    
-                    if (data.users) localStorage.setItem('busTrack_users', JSON.stringify(data.users));
-                    if (data.routes) localStorage.setItem('busTrack_routes', JSON.stringify(data.routes));
-                    if (data.trips) localStorage.setItem('busTrack_trips', JSON.stringify(data.trips));
-                    if (data.notifications) localStorage.setItem('busTrack_notifications', JSON.stringify(data.notifications));
-                    if (data.settings) localStorage.setItem('busTrack_settings', JSON.stringify(data.settings));
-                    
-                    return true;
-                } catch (error) {
-                    console.error('Import failed:', error);
-                    return false;
-                }
-            },
-
-            // Clear all data (reset to demo)
-            clearAllData() {
-                const keys = [
-                    'busTrack_users',
-                    'busTrack_routes',
-                    'busTrack_trips',
-                    'busTrack_notifications',
-                    'busTrack_settings',
-                    'busTrack_session'
-                ];
-                
-                keys.forEach(key => localStorage.removeItem(key));
-                this.initDemoData();
-                return true;
-            }
-        };
+        let busLocation = { ...CONFIG.DEFAULT_LOCATION };
+        let students = [];
+        let refreshInterval = null;
+        let locationWatchId = null;
+        let lastLocationUpdate = null;
+        let isOnline = navigator.onLine;
 
         // ==================== INITIALIZATION ====================
         window.addEventListener('DOMContentLoaded', () => {
-            // Initialize storage with demo data
-            StorageManager.initDemoData();
+            setupLanguageDropdown();
+            setupOfflineDetection();
+            checkExistingSession();
+        });
+
+        function setupLanguageDropdown() {
+            const languageBtn = document.getElementById('languageBtn');
+            const dropdownContent = document.getElementById('languageDropdownContent');
             
-            // Check for existing session
-            const session = StorageManager.getSession();
+            languageBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdownContent.classList.toggle('show');
+                languageBtn.classList.toggle('active');
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (!languageBtn.contains(e.target) && !dropdownContent.contains(e.target)) {
+                    dropdownContent.classList.remove('show');
+                    languageBtn.classList.remove('active');
+                }
+            });
+            
+            dropdownContent.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
+
+        function setupOfflineDetection() {
+            window.addEventListener('online', () => {
+                isOnline = true;
+                document.getElementById('offline-indicator').style.display = 'none';
+                showToast('Network', 'You are back online', 'success');
+            });
+
+            window.addEventListener('offline', () => {
+                isOnline = false;
+                document.getElementById('offline-indicator').style.display = 'block';
+                showToast('Network', 'You are offline', 'warning');
+            });
+        }
+
+        function checkExistingSession() {
+            const session = localStorage.getItem('busTrack_session');
             if (session) {
-                const user = StorageManager.getUser(session.email);
-                if (user) {
-                    currentUser = user;
-                    currentRole = user.role;
-                    initApp();
-                    return;
+                try {
+                    const sessionData = JSON.parse(session);
+                    if (sessionData.expires > Date.now()) {
+                        const user = localStorage.getItem(`busTrack_user_${sessionData.userId}`);
+                        if (user) {
+                            currentUser = JSON.parse(user);
+                            currentRole = currentUser.role;
+                            initApp();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    localStorage.removeItem('busTrack_session');
                 }
             }
             
-            // Show loading animation
             simulateLoading();
-        });
+        }
 
         function simulateLoading() {
             let progress = 0;
@@ -1364,13 +1403,32 @@
                     setTimeout(() => {
                         document.getElementById('loading-screen').classList.add('hidden');
                         document.getElementById('login-screen').classList.remove('hidden');
-                        // Pre-fill demo credentials
-                        document.getElementById('email').value = 'driver@demo.com';
-                        document.getElementById('password').value = 'driver123';
-                        selectRole('driver');
+                        changeLanguage(currentLanguage);
                     }, 500);
                 }
             }, 30);
+        }
+
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            document.getElementById('current-language').textContent = lang === 'en' ? 'English' : 'Kiswahili';
+            updateTextContent();
+            document.getElementById('languageDropdownContent').classList.remove('show');
+            document.getElementById('languageBtn').classList.remove('active');
+        }
+
+        function updateTextContent() {
+            const lang = translations[currentLanguage];
+            Object.keys(lang).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.placeholder = lang[key];
+                    } else {
+                        element.textContent = lang[key];
+                    }
+                }
+            });
         }
 
         // ==================== AUTHENTICATION ====================
@@ -1388,12 +1446,19 @@
                 option.classList.remove('selected');
             });
             event.target.closest('.role-option').classList.add('selected');
+            
+            const childSection = document.getElementById('child-details-section');
+            if (role === 'parent') {
+                childSection.classList.remove('hidden');
+            } else {
+                childSection.classList.add('hidden');
+            }
         }
 
-        function handleLogin(event) {
+        async function handleLogin(event) {
             event.preventDefault();
             
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const rememberMe = document.getElementById('remember-me').checked;
             
@@ -1407,33 +1472,57 @@
                 return;
             }
             
-            const user = StorageManager.getUser(email);
+            showLoading();
             
-            if (user && user.password === password && user.role === selectedRole) {
-                currentUser = user;
-                currentRole = user.role;
+            try {
+                // In a real app, this would be an API call
+                await new Promise(resolve => setTimeout(resolve, 1000));
                 
-                // Save session
-                StorageManager.saveSession(user);
+                const userKey = `busTrack_user_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                const storedUser = localStorage.getItem(userKey);
                 
-                // Hide login and show app
-                document.getElementById('login-screen').classList.add('hidden');
-                initApp();
+                if (storedUser) {
+                    const user = JSON.parse(storedUser);
+                    
+                    if (user.password === password && user.role === selectedRole) {
+                        currentUser = user;
+                        currentRole = user.role;
+                        
+                        const sessionData = {
+                            userId: user.id,
+                            email: user.email,
+                            role: user.role,
+                            loginTime: Date.now(),
+                            expires: Date.now() + (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000)
+                        };
+                        
+                        localStorage.setItem('busTrack_session', JSON.stringify(sessionData));
+                        
+                        hideLoading();
+                        document.getElementById('login-screen').classList.add('hidden');
+                        initApp();
+                        
+                        showToast('Welcome', `Hello, ${user.name}!`, 'success');
+                        return;
+                    }
+                }
                 
-                showToast('Welcome Back', `Hello, ${user.name}!`, 'success');
-            } else {
+                throw new Error('Invalid credentials');
+            } catch (error) {
+                hideLoading();
                 showToast('Login Failed', 'Invalid email or password', 'error');
             }
         }
 
-        function createAccount() {
-            const name = document.getElementById('signup-name').value;
-            const email = document.getElementById('signup-email').value;
+        async function createAccount() {
+            const name = document.getElementById('signup-name').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
             const password = document.getElementById('signup-password').value;
             const confirm = document.getElementById('signup-confirm').value;
+            const phone = document.getElementById('signup-phone').value.trim();
             const terms = document.getElementById('terms').checked;
             
-            if (!name || !email || !password || !confirm) {
+            if (!name || !email || !password || !confirm || !phone) {
                 showToast('Error', 'Please fill in all fields', 'error');
                 return;
             }
@@ -1453,77 +1542,125 @@
                 return;
             }
             
-            // Check if user exists
-            if (StorageManager.getUser(email)) {
-                showToast('Error', 'User with this email already exists', 'error');
-                return;
+            showLoading();
+            
+            try {
+                // Check if user exists
+                const userKey = `busTrack_user_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                if (localStorage.getItem(userKey)) {
+                    throw new Error('User already exists');
+                }
+                
+                // Create user object
+                const newUser = {
+                    id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    email: email,
+                    password: password,
+                    name: name,
+                    role: signupRole,
+                    phone: phone,
+                    avatarSeed: name.replace(/\s+/g, ''),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+                
+                if (signupRole === 'driver') {
+                    newUser.busNumber = 'BUS-' + (Math.floor(Math.random() * 900) + 100);
+                    newUser.route = 'New Route';
+                    newUser.licenseNumber = `DL-${Date.now().toString().substr(-6)}`;
+                } else {
+                    const childName = document.getElementById('child-name-input').value.trim();
+                    const childGrade = document.getElementById('child-grade').value;
+                    const childSchool = document.getElementById('child-school').value;
+                    const childBus = document.getElementById('child-bus').value;
+                    
+                    if (!childName || !childGrade || !childSchool || !childBus) {
+                        throw new Error('Please fill in all child details');
+                    }
+                    
+                    newUser.children = [{
+                        id: `child_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        name: childName,
+                        grade: childGrade,
+                        school: childSchool,
+                        avatarSeed: childName.replace(/\s+/g, ''),
+                        busNumber: childBus,
+                        status: 'waiting',
+                        present: false,
+                        createdAt: new Date().toISOString()
+                    }];
+                    
+                    // Add child to bus roster
+                    addChildToBusRoster(newUser.children[0]);
+                }
+                
+                // Save user
+                localStorage.setItem(userKey, JSON.stringify(newUser));
+                
+                // Create session
+                const sessionData = {
+                    userId: newUser.id,
+                    email: newUser.email,
+                    role: newUser.role,
+                    loginTime: Date.now(),
+                    expires: Date.now() + (30 * 24 * 60 * 60 * 1000)
+                };
+                
+                localStorage.setItem('busTrack_session', JSON.stringify(sessionData));
+                
+                currentUser = newUser;
+                currentRole = signupRole;
+                
+                hideLoading();
+                hideSignup();
+                document.getElementById('login-screen').classList.add('hidden');
+                initApp();
+                
+                showToast('Success', `Account created for ${name}`, 'success');
+                
+            } catch (error) {
+                hideLoading();
+                showToast('Error', error.message, 'error');
             }
+        }
+
+        function addChildToBusRoster(child) {
+            const busRosterKey = `busTrack_roster_${child.busNumber}`;
+            let roster = JSON.parse(localStorage.getItem(busRosterKey) || '[]');
             
-            // Create new user
-            const newUser = {
-                id: 'user_' + Date.now(),
-                email: email,
-                password: password,
-                name: name,
-                role: signupRole,
-                avatarSeed: name.replace(/\s+/g, ''),
-                createdAt: new Date().toISOString()
-            };
-            
-            // Add role-specific data
-            if (signupRole === 'driver') {
-                newUser.route = 'New Route';
-                newUser.busNumber = 'BUS-' + (Math.floor(Math.random() * 900) + 100);
-            } else {
-                newUser.children = [];
+            // Check if child already exists
+            const existingIndex = roster.findIndex(r => r.id === child.id);
+            if (existingIndex === -1) {
+                roster.push({
+                    id: child.id,
+                    name: child.name,
+                    grade: child.grade,
+                    school: child.school,
+                    status: 'waiting',
+                    present: false,
+                    pickupLocation: null,
+                    dropoffLocation: null
+                });
+                
+                localStorage.setItem(busRosterKey, JSON.stringify(roster));
             }
-            
-            // Save user
-            StorageManager.saveUser(newUser);
-            StorageManager.saveSession(newUser);
-            
-            // Set current user
-            currentUser = newUser;
-            currentRole = signupRole;
-            
-            // Close modal and init app
-            hideSignup();
-            document.getElementById('login-screen').classList.add('hidden');
-            initApp();
-            
-            showToast('Welcome!', `Account created for ${name}`, 'success');
-            
-            // Add welcome notification
-            StorageManager.addNotification({
-                type: 'success',
-                title: 'Welcome to BusTrack!',
-                message: 'Your account has been created successfully.'
-            });
         }
 
         // ==================== APP INITIALIZATION ====================
         function initApp() {
-            // Show UI elements
+            // Update UI
             document.getElementById('top-nav').classList.remove('hidden');
             document.getElementById('fab-container').classList.remove('hidden');
             document.getElementById('bottom-sheet').classList.remove('hidden');
             
             // Update user info
-            document.getElementById('user-name').textContent = currentUser.name;
-            document.getElementById('user-role').textContent = currentRole === 'driver' ? 'Driver' : 'Parent';
-            document.getElementById('user-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.avatarSeed}`;
-            document.getElementById('profile-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.avatarSeed}`;
-            document.getElementById('profile-name').textContent = currentUser.name;
-            document.getElementById('profile-email').textContent = currentUser.email;
-            document.getElementById('profile-name-input').value = currentUser.name;
-            document.getElementById('profile-email-input').value = currentUser.email;
-            document.getElementById('profile-phone').value = currentUser.phone || '';
-            
-            // Load settings
-            loadSettings();
+            updateUserInfo();
             
             // Initialize map
             initMap();
+            
+            // Load data
+            loadInitialData();
             
             // Show role-specific UI
             if (currentRole === 'driver') {
@@ -1532,152 +1669,459 @@
                 showParentUI();
             }
             
-            // Expand bottom sheet
+            // Expand bottom sheet with delay
             setTimeout(() => {
                 expandBottomSheet();
-            }, 300);
+                document.getElementById('swipe-hint').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('swipe-hint').classList.add('hidden');
+                }, 5000);
+            }, 500);
             
-            // Start background tasks
-            startBackgroundTasks();
+            // Start refresh interval
+            startRefreshInterval();
+            
+            // Start clock
+            updateTime();
+            setInterval(updateTime, 1000);
         }
 
-        function loadSettings() {
-            const settings = StorageManager.getSettings();
-            
-            // Apply settings to UI
-            document.getElementById('push-notifications').checked = settings.pushNotifications !== false;
-            document.getElementById('email-updates').checked = settings.emailUpdates !== false;
-            document.getElementById('sound-alerts').checked = settings.soundAlerts !== false;
-            document.getElementById('map-style').value = settings.mapStyle || 'light';
-            document.getElementById('refresh-interval').value = settings.refreshInterval || 60;
-            
-            // Start refresh timer
-            startRefreshTimer(settings.refreshInterval || 60);
-        }
-
-        function startRefreshTimer(interval) {
-            if (refreshTimer) clearInterval(refreshTimer);
-            if (interval > 0) {
-                refreshTimer = setInterval(refreshData, interval * 1000);
-            }
+        function updateUserInfo() {
+            document.getElementById('user-name').textContent = currentUser.name;
+            document.getElementById('user-role').textContent = currentRole === 'driver' ? 'Driver' : 'Parent';
+            document.getElementById('user-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.avatarSeed}`;
         }
 
         // ==================== MAP FUNCTIONS ====================
         function initMap() {
-            // Create map
             map = L.map('map', {
-                center: busLatLng,
-                zoom: 15,
+                center: [busLocation.lat, busLocation.lng],
+                zoom: busLocation.zoom,
                 zoomControl: false,
-                attributionControl: false
+                attributionControl: false,
+                tap: false
             });
 
-            // Add tile layer based on settings
-            const settings = StorageManager.getSettings();
-            const style = settings.mapStyle || 'light';
-            
-            let tileUrl;
-            switch(style) {
-                case 'dark':
-                    tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-                    break;
-                case 'satellite':
-                    tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-                    break;
-                default:
-                    tileUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-            }
-
-            L.tileLayer(tileUrl, {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(map);
 
-            // Add zoom control
             L.control.zoom({
                 position: 'bottomright'
             }).addTo(map);
 
-            // Create bus marker
-            const busIcon = L.divIcon({
-                html: `
-                    <div class="bus-marker">
-                        <div class="relative">
-                            <div class="absolute inset-0 bg-blue-400 rounded-full blur-xl opacity-50"></div>
-                            <div class="relative bg-white p-3 rounded-full shadow-2xl border-4 border-blue-500">
-                                <i class="fas fa-bus text-lg text-blue-500"></i>
-                            </div>
-                        </div>
-                    </div>
-                `,
-                className: '',
-                iconSize: [48, 48],
-                iconAnchor: [24, 24]
-            });
+            // Add current location control
+            L.control.locate({
+                position: 'bottomright',
+                drawCircle: true,
+                follow: false,
+                setView: true,
+                keepCurrentZoomLevel: true,
+                markerStyle: {
+                    weight: 1,
+                    opacity: 0.8,
+                    fillOpacity: 0.8
+                },
+                circleStyle: {
+                    weight: 1,
+                    stroke: true,
+                    color: '#3B82F6',
+                    opacity: 0.5,
+                    fillOpacity: 0.2,
+                    fillColor: '#3B82F6'
+                },
+                icon: 'fas fa-location-arrow',
+                metric: true,
+                strings: {
+                    title: "Show my location",
+                    popup: "You are within {distance} {unit} from this point",
+                    outsideMapBoundsMsg: "You seem located outside the map bounds"
+                },
+                locateOptions: {
+                    maxZoom: 16,
+                    watch: false,
+                    enableHighAccuracy: true,
+                    maximumAge: 10000,
+                    timeout: 10000
+                }
+            }).addTo(map);
 
-            busMarker = L.marker(busLatLng, { icon: busIcon }).addTo(map);
-
-            // Load and draw route
-            loadRoute();
+            // Load route data
+            loadRouteData();
         }
 
-        function loadRoute() {
-            // Clear existing stops and route
+        function loadRouteData() {
+            if (currentRole === 'driver') {
+                const routeKey = `busTrack_route_${currentUser.busNumber}`;
+                const routeData = JSON.parse(localStorage.getItem(routeKey));
+                
+                if (routeData) {
+                    displayRoute(routeData);
+                } else {
+                    // Create default route
+                    const defaultRoute = createDefaultRoute();
+                    localStorage.setItem(routeKey, JSON.stringify(defaultRoute));
+                    displayRoute(defaultRoute);
+                }
+            } else if (currentUser.children && currentUser.children[0]) {
+                const busNumber = currentUser.children[0].busNumber;
+                const routeKey = `busTrack_route_${busNumber}`;
+                const routeData = JSON.parse(localStorage.getItem(routeKey));
+                
+                if (routeData) {
+                    displayRoute(routeData);
+                }
+            }
+        }
+
+        function createDefaultRoute() {
+            const stops = [
+                { id: 1, name: "School", lat: -6.8100, lng: 39.2250, order: 1, students: 0 },
+                { id: 2, name: "Stop 1", lat: -6.8000, lng: 39.2200, order: 2, students: 3 },
+                { id: 3, name: "Stop 2", lat: -6.7924, lng: 39.2083, order: 3, students: 6 },
+                { id: 4, name: "Stop 3", lat: -6.7850, lng: 39.2110, order: 4, students: 5 },
+                { id: 5, name: "Stop 4", lat: -6.7780, lng: 39.2150, order: 5, students: 7 }
+            ];
+            
+            return {
+                id: `route_${Date.now()}`,
+                busNumber: currentUser.busNumber,
+                name: "School Route",
+                stops: stops,
+                schedule: {
+                    morningStart: "07:00",
+                    morningEnd: "08:30",
+                    afternoonStart: "15:00",
+                    afternoonEnd: "16:30"
+                },
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+        }
+
+        function displayRoute(routeData) {
+            // Clear existing
             stopMarkers.forEach(marker => map.removeLayer(marker));
             stopMarkers = [];
             if (routeLine) map.removeLayer(routeLine);
-
-            // Get route based on role
-            let route;
-            if (currentRole === 'driver') {
-                route = StorageManager.getRoute(currentUser.busNumber);
-            } else if (currentUser.children && currentUser.children[0]) {
-                route = StorageManager.getRoute(currentUser.children[0].busNumber);
-            }
-
-            if (route) {
-                routeStops = route.stops || [];
-                
-                // Create route line
-                const routeCoords = routeStops.map(stop => [stop.lat, stop.lng]);
-                routeLine = L.polyline(routeCoords, {
-                    color: '#3B82F6',
-                    weight: 4,
-                    opacity: 0.7,
-                    dashArray: '10, 10'
-                }).addTo(map);
-
-                // Create stop markers
-                routeStops.forEach((stop, index) => {
-                    const stopIcon = L.divIcon({
-                        html: `
-                            <div class="stop-marker ${index <= currentStopIndex ? 'completed' : ''}" 
-                                 style="background: ${index <= currentStopIndex ? '#10B981' : 'white'}; 
-                                        border-color: ${index <= currentStopIndex ? '#10B981' : '#3B82F6'};
-                                        color: ${index <= currentStopIndex ? 'white' : '#3B82F6'}">
-                                ${index + 1}
-                            </div>
-                        `,
-                        className: '',
-                        iconSize: [28, 28],
-                        iconAnchor: [14, 14]
-                    });
-
-                    const marker = L.marker([stop.lat, stop.lng], { icon: stopIcon }).addTo(map);
-                    marker.bindPopup(`
-                        <div class="p-2">
-                            <strong class="text-sm">${stop.name}</strong><br>
-                            <span class="text-xs text-gray-600">Stop ${index + 1}</span><br>
-                            <span class="text-xs text-gray-600">${stop.students} students</span>
+            
+            routeStops = routeData.stops || [];
+            
+            // Create route line
+            const routeCoords = routeStops.map(stop => [stop.lat, stop.lng]);
+            routeLine = L.polyline(routeCoords, {
+                color: '#3B82F6',
+                weight: 4,
+                opacity: 0.7,
+                dashArray: '10, 10',
+                className: 'route-line'
+            }).addTo(map);
+            
+            // Create stop markers
+            routeStops.forEach((stop, index) => {
+                const stopIcon = L.divIcon({
+                    html: `
+                        <div class="stop-marker">
+                            ${index + 1}
                         </div>
-                    `);
-                    stopMarkers.push(marker);
+                    `,
+                    className: '',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
                 });
-
-                // Fit map to route
+                
+                const marker = L.marker([stop.lat, stop.lng], { icon: stopIcon }).addTo(map);
+                marker.bindPopup(`
+                    <div class="p-2">
+                        <strong class="text-sm">${stop.name}</strong><br>
+                        <span class="text-xs text-gray-600">Stop ${index + 1}</span><br>
+                        <span class="text-xs text-gray-600">${stop.students || 0} students</span>
+                    </div>
+                `);
+                stopMarkers.push(marker);
+            });
+            
+            // Update UI
+            if (currentRole === 'driver') {
+                document.getElementById('driver-route-name').textContent = routeData.name;
+                document.getElementById('driver-destination').textContent = routeData.name;
+                document.getElementById('route-number-label').textContent = routeData.name;
+                document.getElementById('route-name').textContent = routeData.name;
+            }
+            
+            // Fit bounds
+            if (routeCoords.length > 0) {
                 const bounds = L.latLngBounds(routeCoords);
                 map.fitBounds(bounds, { padding: [50, 50] });
             }
+        }
+
+        // ==================== LOCATION TRACKING ====================
+        function startLocationTracking() {
+            if (!navigator.geolocation) {
+                showToast('Error', 'Geolocation is not supported by your browser', 'error');
+                return;
+            }
+            
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+            
+            locationWatchId = navigator.geolocation.watchPosition(
+                (position) => handleLocationUpdate(position),
+                (error) => handleLocationError(error),
+                options
+            );
+            
+            isDriving = true;
+            lastLocationUpdate = Date.now();
+            updateDriverStatus(true);
+            
+            // Create trip record
+            currentTrip = {
+                id: `trip_${Date.now()}`,
+                userId: currentUser.id,
+                busNumber: currentUser.busNumber,
+                startTime: new Date().toISOString(),
+                status: 'active',
+                locations: [],
+                stopsVisited: []
+            };
+            
+            saveTrip(currentTrip);
+            showToast('Trip Started', 'Location tracking activated', 'success');
+        }
+
+        function stopLocationTracking() {
+            if (locationWatchId) {
+                navigator.geolocation.clearWatch(locationWatchId);
+                locationWatchId = null;
+            }
+            
+            isDriving = false;
+            updateDriverStatus(false);
+            
+            // Update trip record
+            if (currentTrip) {
+                currentTrip.endTime = new Date().toISOString();
+                currentTrip.status = 'completed';
+                saveTrip(currentTrip);
+                currentTrip = null;
+            }
+            
+            showToast('Trip Stopped', 'Location tracking deactivated', 'info');
+        }
+
+        function handleLocationUpdate(position) {
+            const { latitude, longitude, accuracy, speed, heading } = position.coords;
+            
+            busLocation = {
+                lat: latitude,
+                lng: longitude,
+                accuracy: accuracy,
+                speed: speed,
+                heading: heading,
+                timestamp: Date.now()
+            };
+            
+            lastLocationUpdate = Date.now();
+            
+            // Update bus marker
+            updateBusMarker();
+            
+            // Save location to trip
+            if (currentTrip) {
+                currentTrip.locations.push({
+                    lat: latitude,
+                    lng: longitude,
+                    speed: speed,
+                    heading: heading,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Keep only last 100 locations
+                if (currentTrip.locations.length > 100) {
+                    currentTrip.locations = currentTrip.locations.slice(-100);
+                }
+                
+                saveTrip(currentTrip);
+            }
+            
+            // Update bus location in storage for parents
+            saveBusLocationForParents();
+            
+            // Update ETA calculations
+            updateETA();
+            
+            // Check if approaching stops
+            checkApproachingStops();
+        }
+
+        function handleLocationError(error) {
+            let message = 'Unable to get your location';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    message = 'Location permission denied';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = 'Location information unavailable';
+                    break;
+                case error.TIMEOUT:
+                    message = 'Location request timed out';
+                    break;
+            }
+            showToast('Location Error', message, 'error');
+        }
+
+        function updateBusMarker() {
+            if (!busMarker) {
+                const busIcon = L.divIcon({
+                    html: `
+                        <div class="bus-marker">
+                            <div class="bus-marker-pulse"></div>
+                            <div class="bus-marker-inner">
+                                <i class="fas fa-bus text-blue-600"></i>
+                            </div>
+                        </div>
+                    `,
+                    className: '',
+                    iconSize: [48, 48],
+                    iconAnchor: [24, 24]
+                });
+                
+                busMarker = L.marker([busLocation.lat, busLocation.lng], { icon: busIcon }).addTo(map);
+            } else {
+                busMarker.setLatLng([busLocation.lat, busLocation.lng]);
+            }
+            
+            // Update map view if driving
+            if (isDriving) {
+                map.setView([busLocation.lat, busLocation.lng], 16);
+            }
+        }
+
+        function saveBusLocationForParents() {
+            if (currentRole === 'driver') {
+                const locationData = {
+                    lat: busLocation.lat,
+                    lng: busLocation.lng,
+                    speed: busLocation.speed,
+                    heading: busLocation.heading,
+                    timestamp: busLocation.timestamp,
+                    busNumber: currentUser.busNumber
+                };
+                
+                localStorage.setItem(`busTrack_location_${currentUser.busNumber}`, JSON.stringify(locationData));
+            }
+        }
+
+        function updateETA() {
+            if (routeStops.length === 0) return;
+            
+            // Find nearest stop
+            let nearestStop = null;
+            let minDistance = Infinity;
+            
+            routeStops.forEach((stop, index) => {
+                const distance = calculateDistance(
+                    [busLocation.lat, busLocation.lng],
+                    [stop.lat, stop.lng]
+                );
+                
+                if (distance < minDistance && index > currentStopIndex) {
+                    minDistance = distance;
+                    nearestStop = { ...stop, index, distance };
+                }
+            });
+            
+            if (nearestStop) {
+                // Calculate ETA based on distance and speed
+                const speed = busLocation.speed || 30; // km/h
+                const etaMinutes = Math.round((nearestStop.distance / speed) * 60);
+                
+                document.getElementById('eta-time').textContent = Math.max(1, etaMinutes);
+                document.getElementById('parent-eta').textContent = Math.max(1, etaMinutes);
+                document.getElementById('next-stop-name').textContent = nearestStop.name;
+                document.getElementById('driver-next-stop').textContent = nearestStop.name;
+                document.getElementById('next-stop-eta').textContent = `${Math.max(1, etaMinutes)} min`;
+                
+                // Update progress
+                const progress = ((nearestStop.index) / routeStops.length) * 100;
+                document.getElementById('route-progress').style.width = `${progress}%`;
+            }
+        }
+
+        function checkApproachingStops() {
+            if (routeStops.length === 0) return;
+            
+            routeStops.forEach((stop, index) => {
+                const distance = calculateDistance(
+                    [busLocation.lat, busLocation.lng],
+                    [stop.lat, stop.lng]
+                );
+                
+                // If within 100 meters of a stop
+                if (distance < 0.1 && index > currentStopIndex) {
+                    currentStopIndex = index;
+                    
+                    // Update stop marker
+                    updateStopMarkers();
+                    
+                    // Show notification
+                    showToast('Arriving', `Approaching ${stop.name}`, 'info');
+                    
+                    // Record stop visit
+                    if (currentTrip) {
+                        currentTrip.stopsVisited.push({
+                            stopId: stop.id,
+                            name: stop.name,
+                            timestamp: new Date().toISOString()
+                        });
+                        saveTrip(currentTrip);
+                    }
+                }
+            });
+        }
+
+        function updateStopMarkers() {
+            stopMarkers.forEach((marker, index) => {
+                const isCompleted = index < currentStopIndex;
+                const isCurrent = index === currentStopIndex;
+                
+                const className = isCompleted ? 'completed' : isCurrent ? 'current' : '';
+                
+                const icon = L.divIcon({
+                    html: `
+                        <div class="stop-marker ${className}">
+                            ${index + 1}
+                        </div>
+                    `,
+                    className: '',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+                
+                marker.setIcon(icon);
+            });
+        }
+
+        function calculateDistance(point1, point2) {
+            const lat1 = point1[0] || point1.lat;
+            const lon1 = point1[1] || point1.lng;
+            const lat2 = point2[0] || point2.lat;
+            const lon2 = point2[1] || point2.lng;
+            
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
         }
 
         // ==================== DRIVER UI FUNCTIONS ====================
@@ -1686,55 +2130,135 @@
             document.getElementById('driver-ui').classList.remove('hidden');
             document.getElementById('parent-ui').classList.add('hidden');
             document.getElementById('parent-status').classList.add('hidden');
-
+            
             // Load driver data
-            const route = StorageManager.getRoute(currentUser.busNumber);
-            if (route) {
-                document.getElementById('driver-route-name').textContent = `Route #${route.number}`;
-                document.getElementById('driver-destination').textContent = route.name;
-                document.getElementById('route-number').textContent = `Route #${route.number}`;
-                document.getElementById('route-name').textContent = route.name;
-                
-                // Update stops list
-                updateRouteStopsList();
-            }
-
-            // Start clock
-            updateTime();
-            setInterval(updateTime, 1000);
+            loadDriverData();
+            
+            // Show share location button
+            document.getElementById('share-location-btn').classList.remove('hidden');
         }
 
-        function updateRouteStopsList() {
-            const container = document.getElementById('route-stops-list');
-            container.innerHTML = '';
-
-            routeStops.forEach((stop, index) => {
-                const status = index < currentStopIndex ? 'completed' : 
-                              index === currentStopIndex ? 'current' : 'upcoming';
+        function loadDriverData() {
+            // Load students
+            if (currentUser.busNumber) {
+                const rosterKey = `busTrack_roster_${currentUser.busNumber}`;
+                students = JSON.parse(localStorage.getItem(rosterKey) || '[]');
                 
-                const stopEl = document.createElement('div');
-                stopEl.className = 'flex items-center gap-3';
-                stopEl.innerHTML = `
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs
-                        ${status === 'completed' ? 'bg-green-500' : 
-                          status === 'current' ? 'bg-yellow-400 bounce-animation' : 'bg-gray-300'}">
-                        ${status === 'completed' ? '<i class="fas fa-check"></i>' : 
-                          status === 'current' ? '<i class="fas fa-arrow-right"></i>' : index + 1}
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between">
-                            <span class="${status === 'current' ? 'font-bold text-gray-900' : 'text-gray-700'}">
-                                ${stop.name}
-                            </span>
-                            <span class="text-xs ${status === 'completed' ? 'text-gray-500' : 'text-gray-600'}">
-                                Stop ${index + 1}
-                            </span>
-                        </div>
-                        ${stop.students > 0 ? 
-                            `<p class="text-xs text-gray-500">${stop.students} students</p>` : ''}
+                document.getElementById('student-count').textContent = students.filter(s => s.present).length;
+                document.getElementById('present-count').textContent = `${students.filter(s => s.present).length}/${students.length} present`;
+                
+                updateStudentAttendanceList();
+            }
+            
+            // Update status
+            updateDriverStatus(isDriving);
+        }
+
+        function updateDriverStatus(active) {
+            const statusBadge = document.getElementById('driver-status-badge');
+            const toggleButton = document.getElementById('toggle-trip');
+            
+            if (active) {
+                statusBadge.innerHTML = '<i class="fas fa-circle text-xs mr-1 text-green-500"></i>' + translations[currentLanguage]['status-online'];
+                statusBadge.className = 'bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold uppercase';
+                toggleButton.innerHTML = '<i class="fas fa-stop mr-2"></i><span>' + translations[currentLanguage]['stop-trip-button'] + '</span>';
+            } else {
+                statusBadge.innerHTML = '<i class="fas fa-circle text-xs mr-1"></i>' + translations[currentLanguage]['status-offline'];
+                statusBadge.className = 'bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold uppercase';
+                toggleButton.innerHTML = '<i class="fas fa-play mr-2"></i><span>' + translations[currentLanguage]['start-trip-button'] + '</span>';
+            }
+        }
+
+        function toggleTrip() {
+            if (isDriving) {
+                stopLocationTracking();
+            } else {
+                startLocationTracking();
+            }
+        }
+
+        function updateStudentAttendanceList() {
+            const container = document.getElementById('student-attendance-list');
+            container.innerHTML = '';
+            
+            if (students.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-user-graduate text-2xl mb-2"></i>
+                        <p>No students assigned</p>
                     </div>
                 `;
-                container.appendChild(stopEl);
+                return;
+            }
+            
+            students.forEach(student => {
+                const statusClass = student.present ? 'status-present' : 'status-absent';
+                const statusText = student.present ? 'Present' : 'Absent';
+                const statusIcon = student.present ? 'fa-check-circle' : 'fa-times-circle';
+                
+                const studentEl = document.createElement('div');
+                studentEl.className = 'child-item';
+                studentEl.onclick = () => toggleStudentPresence(student.id);
+                studentEl.innerHTML = `
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">${student.name}</span>
+                            <span class="status-badge ${statusClass}">
+                                <i class="fas ${statusIcon} text-xs"></i>
+                                ${statusText}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500">${student.grade} • ${student.school}</div>
+                    </div>
+                `;
+                container.appendChild(studentEl);
+            });
+        }
+
+        function toggleStudentPresence(studentId) {
+            const studentIndex = students.findIndex(s => s.id === studentId);
+            if (studentIndex !== -1) {
+                students[studentIndex].present = !students[studentIndex].present;
+                students[studentIndex].status = students[studentIndex].present ? 'picked' : 'waiting';
+                students[studentIndex].updatedAt = new Date().toISOString();
+                
+                // Save to storage
+                const rosterKey = `busTrack_roster_${currentUser.busNumber}`;
+                localStorage.setItem(rosterKey, JSON.stringify(students));
+                
+                // Update UI
+                updateStudentAttendanceList();
+                
+                // Show notification
+                const message = students[studentIndex].present 
+                    ? `${students[studentIndex].name} marked as present` 
+                    : `${students[studentIndex].name} marked as absent`;
+                showToast('Attendance Updated', message, 'success');
+                
+                // Notify parent
+                notifyParent(students[studentIndex].id, students[studentIndex].present ? 'present' : 'absent');
+            }
+        }
+
+        function markAllPresent() {
+            students.forEach(student => {
+                student.present = true;
+                student.status = 'picked';
+                student.updatedAt = new Date().toISOString();
+            });
+            
+            const rosterKey = `busTrack_roster_${currentUser.busNumber}`;
+            localStorage.setItem(rosterKey, JSON.stringify(students));
+            
+            updateStudentAttendanceList();
+            showToast('All Marked Present', 'All students marked as present', 'success');
+            
+            // Notify all parents
+            students.forEach(student => {
+                notifyParent(student.id, 'present');
             });
         }
 
@@ -1744,32 +2268,122 @@
             document.getElementById('parent-ui').classList.remove('hidden');
             document.getElementById('driver-ui').classList.add('hidden');
             document.getElementById('driver-status').classList.add('hidden');
-
+            
+            // Hide share location button
+            document.getElementById('share-location-btn').classList.add('hidden');
+            
             // Load parent data
+            loadParentData();
+            
+            // Start location updates
+            startParentLocationUpdates();
+        }
+
+        function loadParentData() {
             if (currentUser.children && currentUser.children[0]) {
                 const child = currentUser.children[0];
+                
                 document.getElementById('child-name').textContent = `${child.name}'s Journey`;
-                document.getElementById('bus-info').textContent = `Bus ${child.busNumber} • Driver: Mike`;
+                document.getElementById('bus-info').textContent = `Bus ${child.busNumber} • Driver: --`;
                 document.getElementById('child-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${child.avatarSeed}`;
+                document.getElementById('child-status').textContent = getStatusText(child.status);
+                
+                // Load bus location
+                updateBusLocationForParent(child.busNumber);
                 
                 // Update timeline
                 updateTimeline();
             }
+        }
 
-            // Start ETA updates
-            startEtaUpdates();
+        function updateBusLocationForParent(busNumber) {
+            const locationData = JSON.parse(localStorage.getItem(`busTrack_location_${busNumber}`));
+            
+            if (locationData) {
+                const age = Date.now() - locationData.timestamp;
+                
+                if (age < CONFIG.MAX_LOCATION_AGE) {
+                    // Update ETA
+                    updateETAForParent(locationData);
+                } else {
+                    document.getElementById('eta-time').textContent = '--';
+                    document.getElementById('parent-eta').textContent = '--';
+                }
+            }
+        }
+
+        function updateETAForParent(locationData) {
+            // This would calculate ETA based on distance to school
+            // For now, we'll use a simple calculation
+            const eta = Math.floor(Math.random() * 20) + 5; // 5-25 minutes
+            document.getElementById('eta-time').textContent = eta;
+            document.getElementById('parent-eta').textContent = eta;
+        }
+
+        function startParentLocationUpdates() {
+            // Check bus location every 10 seconds
+            setInterval(() => {
+                if (currentUser.children && currentUser.children[0]) {
+                    updateBusLocationForParent(currentUser.children[0].busNumber);
+                }
+            }, 10000);
+        }
+
+        function markChildPicked() {
+            if (currentUser.children && currentUser.children[0]) {
+                const child = currentUser.children[0];
+                child.status = 'picked';
+                child.updatedAt = new Date().toISOString();
+                
+                // Update in storage
+                updateUserInStorage();
+                
+                // Update UI
+                document.getElementById('child-status').textContent = getStatusText(child.status);
+                
+                showToast('Child Picked Up', `${child.name} marked as picked up`, 'success');
+                
+                // Notify driver
+                notifyDriver(child.id, 'picked');
+            }
+        }
+
+        function markChildDropped() {
+            if (currentUser.children && currentUser.children[0]) {
+                const child = currentUser.children[0];
+                child.status = 'dropped';
+                child.updatedAt = new Date().toISOString();
+                
+                // Update in storage
+                updateUserInStorage();
+                
+                // Update UI
+                document.getElementById('child-status').textContent = getStatusText(child.status);
+                
+                showToast('Child Dropped Off', `${child.name} marked as dropped at school`, 'success');
+                
+                // Notify driver
+                notifyDriver(child.id, 'dropped');
+            }
+        }
+
+        function updateUserInStorage() {
+            const userKey = `busTrack_user_${currentUser.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            currentUser.updatedAt = new Date().toISOString();
+            localStorage.setItem(userKey, JSON.stringify(currentUser));
         }
 
         function updateTimeline() {
             const container = document.getElementById('timeline-items');
             container.innerHTML = '';
-
+            
+            const now = new Date();
             const timelineData = [
-                { time: '07:45 AM', title: 'Pickup', desc: '7th Avenue Crossroads', icon: 'map-marker-alt', color: 'blue', status: 'completed' },
-                { time: '07:52 AM', title: 'Current Location', desc: 'Approaching Oak Street', icon: 'location-arrow', color: 'yellow', status: 'current' },
-                { time: '08:20 AM', title: 'School Arrival', desc: 'Lincoln Elementary', icon: 'school', color: 'green', status: 'upcoming' }
+                { time: '07:00 AM', title: 'Bus Departure', desc: 'From school', icon: 'bus', color: 'blue', status: 'completed' },
+                { time: now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), title: 'Current Location', desc: 'En route', icon: 'location-arrow', color: 'yellow', status: 'current' },
+                { time: '08:00 AM', title: 'Estimated Arrival', desc: 'At your location', icon: 'map-marker-alt', color: 'green', status: 'upcoming' }
             ];
-
+            
             timelineData.forEach(item => {
                 const itemEl = document.createElement('div');
                 itemEl.className = 'flex items-center gap-4 relative';
@@ -1783,184 +2397,88 @@
                     </div>
                     <div class="text-right">
                         <p class="font-bold text-gray-900">${item.time.split(' ')[0]}</p>
-                        <p class="text-xs text-gray-500">${item.time.split(' ')[1]}</p>
+                        <p class="text-xs text-gray-500">${item.time.split(' ')[1] || ''}</p>
                     </div>
                 `;
                 container.appendChild(itemEl);
             });
         }
 
-        function startEtaUpdates() {
-            if (etaTimer) clearInterval(etaTimer);
-            
-            etaTimer = setInterval(() => {
-                if (isDriving) {
-                    const etaEl = document.getElementById('eta-time');
-                    const parentEta = document.getElementById('parent-eta');
-                    let currentEta = parseInt(etaEl.textContent) || 8;
-                    
-                    if (currentEta > 0) {
-                        currentEta--;
-                        etaEl.textContent = currentEta;
-                        parentEta.innerHTML = `${currentEta}<span class="text-sm text-yellow-600"> min</span>`;
-                        
-                        // Update progress
-                        const progress = 100 - (currentEta / 8 * 100);
-                        document.getElementById('route-progress').style.width = `${progress}%`;
-                    }
-                }
-            }, 60000); // Update every minute
-        }
-
-        // ==================== TRIP MANAGEMENT ====================
-        function toggleTrip() {
-            if (!isDriving) {
-                startTrip();
-            } else {
-                endTrip();
-            }
-        }
-
-        function startTrip() {
-            isDriving = true;
-            currentStopIndex = 0;
-
-            // Update UI
-            document.getElementById('toggle-trip').innerHTML = '<i class="fas fa-stop mr-2"></i><span>End Trip</span>';
-            document.getElementById('driver-status-badge').innerHTML = '<i class="fas fa-circle text-xs mr-1 text-green-500"></i>Live';
-            document.getElementById('driver-status-badge').className = 'bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold uppercase';
-
-            // Create trip record
-            currentTrip = {
-                userId: currentUser.id,
-                role: 'driver',
-                busNumber: currentUser.busNumber,
-                startTime: new Date().toISOString(),
-                status: 'active',
-                stops: routeStops.map(stop => ({ ...stop, visited: false }))
-            };
-
-            // Save trip
-            StorageManager.saveTrip(currentTrip);
-
-            // Start simulation
-            simulateTrip();
-
-            showToast('Trip Started', 'Route tracking has begun', 'success');
-
-            // Notify parents
-            if (currentRole === 'driver') {
-                StorageManager.addNotification({
-                    type: 'info',
-                    title: 'Bus Departure',
-                    message: `Bus ${currentUser.busNumber} has started its route.`
-                });
-            }
-        }
-
-        function endTrip() {
-            isDriving = false;
-
-            // Update UI
-            document.getElementById('toggle-trip').innerHTML = '<i class="fas fa-play mr-2"></i><span>Start Trip</span>';
-            document.getElementById('driver-status-badge').innerHTML = '<i class="fas fa-circle text-xs mr-1"></i>Offline';
-            document.getElementById('driver-status-badge').className = 'bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold uppercase';
-
-            // Stop simulation
-            if (tripSimulation) {
-                clearTimeout(tripSimulation);
-                tripSimulation = null;
-            }
-
-            // Update trip record
-            if (currentTrip) {
-                currentTrip.endTime = new Date().toISOString();
-                currentTrip.status = 'completed';
-                currentTrip.distance = 12.5;
-                currentTrip.onTime = true;
-                StorageManager.saveTrip(currentTrip);
-            }
-
-            showToast('Trip Ended', 'Route tracking stopped', 'info');
-        }
-
-        function simulateTrip() {
-            if (!isDriving) return;
-
-            // Move to next stop
-            currentStopIndex = (currentStopIndex + 1) % routeStops.length;
-            const nextStop = routeStops[currentStopIndex];
-
-            // Update bus position
-            busLatLng = [nextStop.lat, nextStop.lng];
-            busMarker.setLatLng(busLatLng);
-
-            // Update UI
-            document.getElementById('driver-next-stop').textContent = nextStop.name;
-            document.getElementById('next-stop-name').textContent = nextStop.name;
-            document.getElementById('next-stop-eta').textContent = 'Arriving now';
-
-            // Update progress
-            const progress = ((currentStopIndex + 1) / routeStops.length) * 100;
-            document.getElementById('route-progress').style.width = `${progress}%`;
-
-            // Update route display
-            updateRouteStopsList();
-            updateStopMarkers();
-
-            // Center map
-            map.setView(busLatLng, 16);
-
-            // Show notification
-            if (currentStopIndex < routeStops.length - 1) {
-                showToast('Next Stop', `Arriving at ${nextStop.name}`, 'info');
-                
-                // Notify parents
-                StorageManager.addNotification({
-                    type: 'info',
-                    title: 'Bus Update',
-                    message: `Bus ${currentUser.busNumber} is arriving at ${nextStop.name}.`
-                });
-            }
-
-            // Continue simulation
-            if (isDriving) {
-                tripSimulation = setTimeout(simulateTrip, 5000);
-            }
-        }
-
-        function updateStopMarkers() {
-            stopMarkers.forEach((marker, index) => {
-                const stop = routeStops[index];
-                const isCompleted = index <= currentStopIndex;
-                
-                const icon = L.divIcon({
-                    html: `
-                        <div class="stop-marker ${isCompleted ? 'completed' : ''}" 
-                             style="background: ${isCompleted ? '#10B981' : 'white'}; 
-                                    border-color: ${isCompleted ? '#10B981' : '#3B82F6'};
-                                    color: ${isCompleted ? 'white' : '#3B82F6'}">
-                            ${index + 1}
-                        </div>
-                    `,
-                    className: '',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 14]
-                });
-                
-                marker.setIcon(icon);
-            });
-        }
-
         // ==================== UTILITY FUNCTIONS ====================
-        function updateTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: false 
-            });
-            document.getElementById('current-time').textContent = timeStr;
+        function getStatusText(status) {
+            return translations[currentLanguage][`status-${status}`] || status;
+        }
+
+        function notifyParent(childId, action) {
+            // In a real app, this would send a push notification
+            // For now, we'll create a notification in storage
+            const notification = {
+                id: `notif_${Date.now()}`,
+                type: 'info',
+                title: action === 'present' ? 'Student Present' : 'Student Absent',
+                message: `Your child's attendance has been updated`,
+                timestamp: new Date().toISOString(),
+                read: false
+            };
+            
+            // Save notification
+            saveNotification(notification);
+        }
+
+        function notifyDriver(childId, action) {
+            // In a real app, this would send a notification to the driver
+            // For now, we'll just log it
+            console.log(`Driver notified: Child ${childId} ${action}`);
+        }
+
+        function saveNotification(notification) {
+            const notifications = JSON.parse(localStorage.getItem('busTrack_notifications') || '[]');
+            notifications.unshift(notification);
+            
+            // Keep only last 50 notifications
+            if (notifications.length > 50) {
+                notifications.pop();
+            }
+            
+            localStorage.setItem('busTrack_notifications', JSON.stringify(notifications));
+        }
+
+        function saveTrip(trip) {
+            const trips = JSON.parse(localStorage.getItem('busTrack_trips') || '[]');
+            trips.unshift(trip);
+            
+            // Keep only last 100 trips
+            if (trips.length > 100) {
+                trips.pop();
+            }
+            
+            localStorage.setItem('busTrack_trips', JSON.stringify(trips));
+        }
+
+        function loadInitialData() {
+            // Load any initial data needed
+        }
+
+        function startRefreshInterval() {
+            refreshInterval = setInterval(() => {
+                refreshData();
+            }, CONFIG.REFRESH_INTERVAL);
+        }
+
+        function refreshData() {
+            if (currentRole === 'driver') {
+                loadDriverData();
+            } else {
+                loadParentData();
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
         }
 
         function showToast(title, message, type = 'info') {
@@ -1986,7 +2504,6 @@
             
             toast.classList.remove('hidden');
             
-            // Auto-hide after 4 seconds
             setTimeout(hideToast, 4000);
         }
 
@@ -1994,303 +2511,34 @@
             document.getElementById('toast').classList.add('hidden');
         }
 
-        function showLoading(text) {
-            document.getElementById('loading-text').textContent = text;
-            document.getElementById('loading-overlay').style.display = 'flex';
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('current-time').textContent = timeStr;
         }
 
-        function hideLoading() {
-            document.getElementById('loading-overlay').style.display = 'none';
-        }
-
-        // ==================== MODAL FUNCTIONS ====================
-        // Show modals
-        function showForgotPassword() {
-            document.getElementById('forgot-password-modal').style.display = 'flex';
-        }
-
-        function showSignup() {
-            document.getElementById('signup-modal').style.display = 'flex';
-        }
-
-        function showUserMenu() {
-            document.getElementById('user-menu-modal').style.display = 'flex';
-        }
-
-        function showProfile() {
-            document.getElementById('user-menu-modal').style.display = 'none';
-            document.getElementById('profile-modal').style.display = 'flex';
-        }
-
-        function showSettings() {
-            document.getElementById('user-menu-modal').style.display = 'none';
-            document.getElementById('settings-modal').style.display = 'flex';
-        }
-
-        function showHelp() {
-            document.getElementById('user-menu-modal').style.display = 'none';
-            document.getElementById('help-modal').style.display = 'flex';
-        }
-
-        function showHistory() {
-            loadHistory();
-            document.getElementById('history-modal').style.display = 'flex';
-        }
-
-        function showTerms() {
-            document.getElementById('terms-modal').style.display = 'flex';
-        }
-
-        function showImportData() {
-            document.getElementById('import-modal').style.display = 'flex';
-        }
-
-        // Hide modals
-        function hideForgotPassword() {
-            document.getElementById('forgot-password-modal').style.display = 'none';
-        }
-
-        function hideSignup() {
-            document.getElementById('signup-modal').style.display = 'none';
-        }
-
-        function hideProfile() {
-            document.getElementById('profile-modal').style.display = 'none';
-        }
-
-        function hideSettings() {
-            document.getElementById('settings-modal').style.display = 'none';
-        }
-
-        function hideHelp() {
-            document.getElementById('help-modal').style.display = 'none';
-        }
-
-        function hideHistory() {
-            document.getElementById('history-modal').style.display = 'none';
-        }
-
-        function hideTerms() {
-            document.getElementById('terms-modal').style.display = 'none';
-        }
-
-        function hideImport() {
-            document.getElementById('import-modal').style.display = 'none';
-        }
-
-        // ==================== BUTTON FUNCTIONS ====================
-        function sendResetLink() {
-            const email = document.getElementById('reset-email').value;
-            if (!email) {
-                showToast('Error', 'Please enter your email', 'error');
-                return;
-            }
-            
-            showToast('Reset Link Sent', 'Check your email for instructions', 'success');
-            hideForgotPassword();
-        }
-
-        function updateProfile() {
-            const name = document.getElementById('profile-name-input').value;
-            const phone = document.getElementById('profile-phone').value;
-            
-            if (!name) {
-                showToast('Error', 'Name is required', 'error');
-                return;
-            }
-            
-            // Update user in storage
-            const users = JSON.parse(localStorage.getItem('busTrack_users') || '{}');
-            if (users[currentUser.email]) {
-                users[currentUser.email].name = name;
-                users[currentUser.email].phone = phone;
-                localStorage.setItem('busTrack_users', JSON.stringify(users));
-                
-                // Update current user
-                currentUser.name = name;
-                currentUser.phone = phone;
-                
-                // Update UI
-                document.getElementById('user-name').textContent = name;
-                document.getElementById('profile-name').textContent = name;
-                
-                showToast('Profile Updated', 'Your profile has been updated', 'success');
-                hideProfile();
-            }
-        }
-
-        function saveSettings() {
-            const settings = {
-                pushNotifications: document.getElementById('push-notifications').checked,
-                emailUpdates: document.getElementById('email-updates').checked,
-                soundAlerts: document.getElementById('sound-alerts').checked,
-                mapStyle: document.getElementById('map-style').value,
-                refreshInterval: parseInt(document.getElementById('refresh-interval').value),
-                theme: 'blue'
-            };
-            
-            StorageManager.saveSettings(settings);
-            
-            // Restart refresh timer
-            startRefreshTimer(settings.refreshInterval);
-            
-            // Update map style if changed
-            if (map) {
-                const tileUrl = getTileUrl(settings.mapStyle);
-                map.eachLayer(layer => {
-                    if (layer instanceof L.TileLayer) {
-                        map.removeLayer(layer);
-                    }
-                });
-                
-                L.tileLayer(tileUrl, {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 19
-                }).addTo(map);
-                
-                // Re-add other layers
-                if (busMarker) busMarker.addTo(map);
-                if (routeLine) routeLine.addTo(map);
-                stopMarkers.forEach(marker => marker.addTo(map));
-            }
-            
-            showToast('Settings Saved', 'Your preferences have been updated', 'success');
-            hideSettings();
-        }
-
-        function getTileUrl(style) {
-            switch(style) {
-                case 'dark':
-                    return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-                case 'satellite':
-                    return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-                default:
-                    return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-            }
-        }
-
-        function exportData() {
-            const data = StorageManager.exportData();
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `bustrack-backup-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            showToast('Data Exported', 'Your data has been downloaded', 'success');
-        }
-
-        function importData() {
-            const fileInput = document.getElementById('import-file');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                showToast('Error', 'Please select a file', 'error');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const success = StorageManager.importData(e.target.result);
-                if (success) {
-                    showToast('Data Imported', 'Your data has been restored', 'success');
-                    hideImport();
-                    // Refresh the page to apply changes
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showToast('Error', 'Failed to import data. Invalid file format.', 'error');
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function clearAllData() {
-            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
-                StorageManager.clearAllData();
-                showToast('Data Cleared', 'All data has been reset', 'success');
-                setTimeout(() => location.reload(), 1500);
-            }
-        }
-
-        function loadHistory() {
-            const trips = StorageManager.getTrips(10);
-            const container = document.getElementById('history-list');
-            container.innerHTML = '';
-            
-            if (trips.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-4">No trip history found</p>';
-                return;
-            }
-            
-            trips.forEach(trip => {
-                const date = new Date(trip.timestamp);
-                const item = document.createElement('div');
-                item.className = 'p-3 border border-gray-200 rounded-lg hover:bg-gray-50';
-                item.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium">${trip.busNumber}</span>
-                        <span class="text-sm text-gray-500">${date.toLocaleDateString()}</span>
-                    </div>
-                    <div class="text-sm text-gray-600 mt-1">
-                        ${trip.status === 'completed' ? 'Completed' : 'In Progress'} • 
-                        ${trip.distance ? trip.distance + ' mi' : 'Distance N/A'}
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        function clearHistory() {
-            if (confirm('Are you sure you want to clear all trip history?')) {
-                StorageManager.clearTrips();
-                loadHistory();
-                showToast('History Cleared', 'All trip history has been removed', 'success');
-            }
-        }
-
-        function callDriver() {
-            showToast('Calling Driver', 'Connecting to Mike...', 'info');
-            // In a real app, this would initiate a phone call
-            // Simulate call with delay
-            setTimeout(() => {
-                showToast('Call Connected', 'You are now connected to the driver', 'success');
-            }, 2000);
-        }
-
-        function showNotifications() {
-            const notifications = StorageManager.getNotifications();
-            const unreadCount = notifications.filter(n => !n.read).length;
-            
-            if (unreadCount > 0) {
-                StorageManager.markAllAsRead();
-                showToast('Notifications', `You had ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}`, 'info');
-            } else {
-                showToast('Notifications', 'No new notifications', 'info');
-            }
-        }
-
-        function refreshData() {
-            showToast('Refreshing', 'Updating data...', 'info');
-            
-            // Simulate data refresh
-            setTimeout(() => {
-                if (currentRole === 'driver') {
-                    updateRouteStopsList();
-                } else {
-                    updateTimeline();
-                }
-                showToast('Updated', 'Data refreshed successfully', 'success');
-            }, 1000);
-        }
-
+        // ==================== UI CONTROLS ====================
         function locateBus() {
-            if (map && busMarker) {
-                map.setView(busMarker.getLatLng(), 16);
-                showToast('Location', 'Centered on bus position', 'info');
+            if (map && busLocation) {
+                map.setView([busLocation.lat, busLocation.lng], 16);
+                showToast('Location', 'Centered on bus location', 'info');
+            }
+        }
+
+        function shareLocation() {
+            if (navigator.share && isDriving) {
+                navigator.share({
+                    title: 'Bus Location',
+                    text: `Bus ${currentUser.busNumber} is currently at ${busLocation.lat.toFixed(6)}, ${busLocation.lng.toFixed(6)}`,
+                    url: window.location.href
+                }).catch(console.error);
+            } else {
+                showToast('Share', 'Copying location to clipboard', 'info');
+                
+                const locationText = `Bus ${currentUser.busNumber} Location: https://maps.google.com/?q=${busLocation.lat},${busLocation.lng}`;
+                navigator.clipboard.writeText(locationText).then(() => {
+                    showToast('Copied', 'Location copied to clipboard', 'success');
+                });
             }
         }
 
@@ -2313,58 +2561,140 @@
             document.getElementById('bottom-sheet').style.transform = 'translateY(calc(100% - 60px))';
         }
 
-        function toggleChildStatus() {
-            showToast('Child Status', 'Status updated to present', 'success');
+        // ==================== MODAL FUNCTIONS ====================
+        function showSignup() {
+            document.getElementById('signup-modal').style.display = 'flex';
+        }
+
+        function hideSignup() {
+            document.getElementById('signup-modal').style.display = 'none';
+        }
+
+        function showUserMenu() {
+            document.getElementById('user-menu-modal').style.display = 'flex';
         }
 
         function showStudentList() {
-            showToast('Student Roster', 'Showing student list (24 students on board)', 'info');
+            document.getElementById('student-list-modal').style.display = 'flex';
+            populateStudentList();
+        }
+
+        function hideStudentList() {
+            document.getElementById('student-list-modal').style.display = 'none';
+        }
+
+        function populateStudentList() {
+            const container = document.getElementById('student-list');
+            container.innerHTML = '';
+            
+            if (students.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-user-graduate text-2xl mb-2"></i>
+                        <p>No students available</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            students.forEach(student => {
+                const statusClass = student.present ? 'status-present' : 'status-absent';
+                const statusText = student.present ? 'Present' : 'Absent';
+                const statusIcon = student.present ? 'fa-check-circle' : 'fa-times-circle';
+                
+                const studentEl = document.createElement('div');
+                studentEl.className = 'child-item';
+                studentEl.onclick = () => toggleStudentPresence(student.id);
+                studentEl.innerHTML = `
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium">${student.name}</span>
+                            <span class="status-badge ${statusClass}">
+                                <i class="fas ${statusIcon} text-xs"></i>
+                                ${statusText}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500">${student.grade} • ${student.school}</div>
+                        <div class="text-xs text-gray-500 mt-1">Status: ${getStatusText(student.status)}</div>
+                    </div>
+                `;
+                container.appendChild(studentEl);
+            });
+        }
+
+        // ==================== OTHER FUNCTIONS ====================
+        function callDriver() {
+            if (currentUser.children && currentUser.children[0]) {
+                const busNumber = currentUser.children[0].busNumber;
+                showToast('Call Driver', `Calling driver of bus ${busNumber}...`, 'info');
+                
+                // In a real app, this would initiate a phone call
+                setTimeout(() => {
+                    showToast('Call Connected', 'You are now connected to the driver', 'success');
+                }, 2000);
+            }
+        }
+
+        function showNotifications() {
+            const notifications = JSON.parse(localStorage.getItem('busTrack_notifications') || '[]');
+            const unreadCount = notifications.filter(n => !n.read).length;
+            
+            if (unreadCount > 0) {
+                showToast('Notifications', `You have ${unreadCount} unread notifications`, 'info');
+            } else {
+                showToast('Notifications', 'No new notifications', 'info');
+            }
+        }
+
+        function showHistory() {
+            const trips = JSON.parse(localStorage.getItem('busTrack_trips') || '[]');
+            if (trips.length > 0) {
+                showToast('History', `You have ${trips.length} past trips`, 'info');
+            } else {
+                showToast('History', 'No trip history', 'info');
+            }
+        }
+
+        function showForgotPassword() {
+            showToast('Forgot Password', 'Please contact school administration', 'info');
+        }
+
+        function showProfile() {
+            showToast('Profile', 'Profile page coming soon', 'info');
+        }
+
+        function showSettings() {
+            showToast('Settings', 'Settings page coming soon', 'info');
+        }
+
+        function showHelp() {
+            showToast('Help', 'Help center coming soon', 'info');
         }
 
         function showNextStopDetails() {
-            showToast('Next Stop', 'Oak Street - 5 students expected', 'info');
+            showToast('Stop Details', 'Showing stop information', 'info');
         }
 
         function showSchedule() {
             showToast('Schedule', 'Showing route schedule', 'info');
         }
 
-        function showFullRoute() {
-            showToast('Full Route', 'Showing complete route map', 'info');
-        }
-
-        function startBackgroundTasks() {
-            // Check for notifications every 30 seconds
-            setInterval(() => {
-                if (isDriving && currentRole === 'driver') {
-                    // Simulate random events
-                    if (Math.random() > 0.7) {
-                        const events = [
-                            'Traffic delay ahead',
-                            'Student pickup completed',
-                            'Weather update: Clear skies',
-                            'Schedule running on time'
-                        ];
-                        const randomEvent = events[Math.floor(Math.random() * events.length)];
-                        
-                        StorageManager.addNotification({
-                            type: 'info',
-                            title: 'Bus Update',
-                            message: randomEvent
-                        });
-                    }
-                }
-            }, 30000);
-        }
-
         function logout() {
-            // Clear session
-            StorageManager.clearSession();
+            // Stop location tracking
+            if (locationWatchId) {
+                navigator.geolocation.clearWatch(locationWatchId);
+            }
             
             // Clear intervals
-            if (refreshTimer) clearInterval(refreshTimer);
-            if (etaTimer) clearInterval(etaTimer);
-            if (tripSimulation) clearTimeout(tripSimulation);
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            
+            // Clear session
+            localStorage.removeItem('busTrack_session');
             
             // Reset state
             currentUser = null;
@@ -2379,11 +2709,16 @@
             document.getElementById('parent-ui').classList.add('hidden');
             document.getElementById('driver-status').classList.add('hidden');
             document.getElementById('parent-status').classList.add('hidden');
+            document.getElementById('swipe-hint').classList.add('hidden');
             
-            // Close all modals
+            // Close modals
             document.querySelectorAll('.modal').forEach(modal => {
                 modal.style.display = 'none';
             });
+            
+            // Close language dropdown
+            document.getElementById('languageDropdownContent').classList.remove('show');
+            document.getElementById('languageBtn').classList.remove('active');
             
             // Show login screen
             document.getElementById('login-screen').classList.remove('hidden');
@@ -2391,50 +2726,43 @@
             showToast('Logged Out', 'You have been logged out successfully', 'info');
         }
 
-        // Initialize touch handling for bottom sheet
-        document.getElementById('bottom-sheet').addEventListener('touchstart', handleTouchStart, { passive: false });
-        document.getElementById('bottom-sheet').addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.getElementById('bottom-sheet').addEventListener('touchend', handleTouchEnd, { passive: false });
-
+        // Touch handling for bottom sheet
         let touchStartY = 0;
         let touchCurrentY = 0;
         let isDragging = false;
 
-        function handleTouchStart(e) {
+        document.getElementById('bottom-sheet').addEventListener('touchstart', function(e) {
             touchStartY = e.touches[0].clientY;
             touchCurrentY = touchStartY;
             isDragging = true;
-        }
+            this.style.transition = 'none';
+        }, { passive: true });
 
-        function handleTouchMove(e) {
+        document.getElementById('bottom-sheet').addEventListener('touchmove', function(e) {
             if (!isDragging) return;
             touchCurrentY = e.touches[0].clientY;
             const deltaY = touchCurrentY - touchStartY;
             
             if (deltaY > 0) {
-                e.preventDefault();
-                const sheet = document.getElementById('bottom-sheet');
                 const maxDelta = 200;
                 const progress = Math.min(deltaY / maxDelta, 1);
-                sheet.style.transform = `translateY(calc(100% - 60px + ${progress * 60}px))`;
-                sheet.style.transition = 'none';
+                this.style.transform = `translateY(calc(100% - 60px + ${progress * 60}px))`;
             }
-        }
+        }, { passive: true });
 
-        function handleTouchEnd() {
+        document.getElementById('bottom-sheet').addEventListener('touchend', function() {
             if (!isDragging) return;
             isDragging = false;
             
             const deltaY = touchCurrentY - touchStartY;
-            const sheet = document.getElementById('bottom-sheet');
-            sheet.style.transition = 'transform 0.3s ease';
+            this.style.transition = 'transform 0.3s ease';
             
-            if (deltaY > 100) {
+            if (deltaY > 50) {
                 collapseBottomSheet();
             } else {
                 expandBottomSheet();
             }
-        }
+        }, { passive: true });
     </script>
 </body>
 </html>
